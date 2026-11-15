@@ -1,0 +1,2955 @@
+<!DOCTYPE html>
+<html lang="ms" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales & Booking Intelligence Dashboard</title>
+    
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- SheetJS (XLSX) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- jsPDF & AutoTable for Pro PDF Payroll Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind Config for Custom Fonts & Colors -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Geist', 'system-ui', 'sans-serif'],
+                        mono: ['"Geist Mono"', 'ui-monospace', 'monospace'],
+                    },
+                    colors: {
+                        obsidian: { 950: '#08090C', 900: '#0B0C10', 850: '#0E1015', 800: '#12141A', 700: '#1A1D25' },
+                        amber: { 100: '#E4E5FF', 200: '#D0D1FF', 300: '#B9BAFF', 400: '#9FA0FF', 500: '#7C7DFF', 600: '#5E5FE8' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #070709;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272A;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #7C7DFF;
+        }
+
+        /* Ambient Background Glows (Colt Blending: Obsidian + Amber Gold) */
+        body {
+            background-color: #070709;
+            background-image: 
+                radial-gradient(circle at 12% 0%, rgba(124,125,255, 0.12) 0%, transparent 42%),
+                radial-gradient(circle at 88% 15%, rgba(234, 179, 8, 0.08) 0%, transparent 38%),
+                radial-gradient(circle at 50% 100%, rgba(124,125,255, 0.07) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: #F4F4F5;
+            overflow-x: hidden;
+        }
+
+        /* Dark Glassmorphism Card */
+        .glass-card {
+            background: linear-gradient(145deg, rgba(18, 18, 24, 0.78) 0%, rgba(10, 10, 14, 0.88) 100%);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(139,140,255, 0.14);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(139,140,255, 0.38);
+            box-shadow: 0 20px 40px -15px rgba(124,125,255, 0.18), 0 0 20px rgba(124,125,255, 0.08), inset 0 1px 0 0 rgba(139,140,255, 0.2);
+        }
+
+        /* Interactive Agent Card Spotlight & Lift */
+        .agent-card {
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .agent-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(139,140,255, 0.12), transparent 40%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .agent-card:hover::before {
+            opacity: 1;
+        }
+
+        .agent-card:hover {
+            transform: translateY(-5px);
+        }
+
+        /* Gold Gradient Text */
+        .text-gold-gradient {
+            background: linear-gradient(135deg, #FEF08A 0%, #8B8CFF 45%, #D97706 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Gold Gradient Button */
+        .btn-gold {
+            background: linear-gradient(135deg, #8B8CFF 0%, #7C7DFF 50%, #D97706 100%);
+            color: #070709;
+            font-weight: 700;
+            box-shadow: 0 4px 20px rgba(124,125,255, 0.3);
+            transition: all 0.25s ease;
+        }
+
+        .btn-gold:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 25px rgba(139,140,255, 0.45);
+            filter: brightness(1.06);
+        }
+
+        .btn-gold:active {
+            transform: translateY(0);
+        }
+
+        /* Staggered Entrance Animations */
+        @keyframes fadeSlideUp {
+            0% {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-enter {
+            opacity: 0;
+            animation: fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Cloud sync status indicator */
+        #cloudSyncBtn[data-status="synced"]  { border-color: rgba(52, 211, 153, 0.65); }
+        #cloudSyncBtn[data-status="syncing"] { border-color: rgba(139,140,255, 0.7); color: #FCD34D; }
+        #cloudSyncBtn[data-status="dirty"]   { border-color: rgba(139,140,255, 0.5); color: #FCD34D; }
+        #cloudSyncBtn[data-status="error"],
+        #cloudSyncBtn[data-status="auth"]    { border-color: rgba(248, 113, 113, 0.7); color: #FCA5A5; }
+        #cloudSyncBtn[data-status="syncing"] i { animation: syncPulse 1s ease-in-out infinite; }
+        @keyframes syncPulse { 50% { opacity: 0.3; } }
+
+
+        /* ===== Design system v3: graphite + periwinkle, hairlines, tabular numbers ===== */
+        :root { --accent:#7C7DFF; --line:rgba(255,255,255,.07); --panel:#0F1116; }
+        ::-webkit-scrollbar-track { background:#08090C; }
+        ::-webkit-scrollbar-thumb:hover { background:var(--accent); }
+        body { font-family:'Geist',system-ui,sans-serif; -webkit-font-smoothing:antialiased;
+               background-color:#08090C;
+               background-image:radial-gradient(900px 380px at 50% -140px, rgba(124,125,255,.17), transparent 70%) !important; }
+        .font-mono, [class*="font-mono"] { font-family:'Geist Mono',ui-monospace,monospace !important; font-variant-numeric:tabular-nums; }
+        .glass-card { background:var(--panel) !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+               border:1px solid var(--line) !important; border-radius:14px !important;
+               box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 1px 2px rgba(0,0,0,.45) !important; transition:border-color .2s ease; }
+        .glass-card:hover { border-color:rgba(255,255,255,.15) !important; }
+        .modal-panel { border:1px solid rgba(255,255,255,.1) !important; border-radius:16px !important; }
+        .agent-card::before { background:radial-gradient(500px circle at var(--mouse-x,50%) var(--mouse-y,50%), rgba(124,125,255,.10), transparent 40%) !important; }
+        .agent-card:hover { transform:translateY(-2px) !important; }
+        .btn-gold { background:var(--accent) !important; color:#0B0C10 !important; font-weight:600; border-radius:10px !important;
+               box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 1px 2px rgba(0,0,0,.5) !important; }
+        .btn-gold:hover { transform:none !important; filter:brightness(1.1) !important; }
+        .text-gold-gradient { background:none !important; -webkit-text-fill-color:#C9CAFF !important; color:#C9CAFF; }
+        .uppercase { text-transform:none !important; }
+        .tracking-wider, .tracking-widest { letter-spacing:.01em !important; }
+        select, input[type=text], input[type=number], input[type=url], input[type=password], input[type=search] {
+               background-color:#0C0E13 !important; border-color:var(--line) !important; border-radius:10px !important; }
+        :focus-visible { outline:2px solid #A5A6FF; outline-offset:2px; }
+        th { font-weight:500 !important; color:#8B8FA3; }
+        tbody tr { border-color:var(--line) !important; }
+        tbody tr:hover { background:rgba(255,255,255,.025); }
+        #tabDashboardBtn, #tabCommissionBtn { border-radius:8px !important; }
+        #emptyStateBanner { border:1px dashed rgba(255,255,255,.14) !important; }
+        @keyframes fadeSlideUp { from { opacity:0; } to { opacity:1; } }
+        .animate-enter { animation-duration:.35s !important; }
+        @media (min-width:1024px) { header.glass-card { position:sticky; top:10px; z-index:30; backdrop-filter:blur(14px) !important; background:rgba(15,17,22,.88) !important; } }
+        /* Hero metric: jualan jadi fokus utama */
+        @media (min-width:1280px) { section:has(#kpiTotalSales) { grid-template-columns:1.7fr 1fr 1fr 1fr; } }
+        @media (min-width:640px) { #kpiTotalSales { font-size:2.75rem !important; line-height:1; letter-spacing:-.03em; } }
+        @media (prefers-reduced-motion:reduce) { *, ::before, ::after { animation:none !important; transition:none !important; } .animate-enter { opacity:1 !important; } }
+
+        /* Custom Select Styling */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23FBBF24' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.25em 1.25em;
+        }
+
+        /* Modal Transitions */
+        .modal-backdrop {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-panel {
+            transform: scale(0.95) translateY(12px);
+            opacity: 0;
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-backdrop.active .modal-panel {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+
+        /* Custom Checkbox Styling */
+        .gold-checkbox {
+            appearance: none;
+            width: 1.15rem;
+            height: 1.15rem;
+            border: 1.5px solid rgba(139,140,255, 0.45);
+            border-radius: 0.35rem;
+            background-color: #070709;
+            cursor: pointer;
+            display: inline-grid;
+            place-content: center;
+            transition: all 0.2s ease;
+        }
+        .gold-checkbox:checked {
+            background-color: #7C7DFF;
+            border-color: #8B8CFF;
+        }
+        .gold-checkbox:checked::before {
+            content: "✓";
+            color: #070709;
+            font-size: 0.75rem;
+            font-weight: 900;
+        }
+    
+        /* ===== 3D scene background + frosted cards + agent card motion ===== */
+        body { background-image:none !important; }
+        #bgScene { position:fixed; inset:0; z-index:-1; overflow:hidden; pointer-events:none;
+                   background:radial-gradient(1100px 600px at 50% -10%, #1a1b3a 0%, #0b0c16 45%, #07080c 100%); }
+        .bg-floor { position:absolute; left:-30%; right:-30%; bottom:-8%; height:62%;
+                   background-image:linear-gradient(rgba(139,140,255,.20) 1px,transparent 1px),linear-gradient(90deg,rgba(139,140,255,.20) 1px,transparent 1px);
+                   background-size:64px 64px; transform:perspective(520px) rotateX(64deg); transform-origin:50% 100%;
+                   -webkit-mask-image:linear-gradient(to top,#000 0%,transparent 85%); mask-image:linear-gradient(to top,#000 0%,transparent 85%); }
+        .orb { position:absolute; width:var(--s); height:var(--s); border-radius:50%;
+               background:radial-gradient(circle at 30% 26%, rgba(255,255,255,.55) 0%, rgba(var(--c),.55) 22%, rgba(var(--c),.18) 52%, transparent 72%);
+               filter:blur(2px); opacity:.55; translate:calc(var(--px,0) * var(--d) * 1px) calc(var(--py,0) * var(--d) * 1px);
+               animation:orbFloat var(--t,7s) ease-in-out infinite alternate; }
+        @keyframes orbFloat { to { transform:translateY(-28px) scale(1.04); } }
+        .bg-vignette { position:absolute; inset:0; background:radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.55) 100%); }
+        .glass-card { background:rgba(15,17,26,.60) !important; backdrop-filter:blur(18px) saturate(140%) !important; -webkit-backdrop-filter:blur(18px) saturate(140%) !important; }
+        header h1 { font-size:clamp(1.5rem,3vw,2.3rem); font-weight:700; letter-spacing:-.035em; }
+        .agent-card, .agent-card:hover { transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(var(--ty,0px)) !important;
+               transition:transform .25s ease-out, border-color .2s !important; will-change:transform; }
+        .agent-card:hover { --ty:-5px; }
+        .agent-card.zoom { animation:cardZoom .55s cubic-bezier(.22,1.2,.36,1); }
+        @keyframes cardZoom { 35% { scale:1.08; } }
+        #agentModal .modal-panel { transform:scale(.55); opacity:0; transition:transform .6s cubic-bezier(.22,1.15,.36,1), opacity .3s ease !important; }
+        #agentModal.active .modal-panel { transform:scale(1); opacity:1; }
+        @media (prefers-reduced-motion:reduce) { .orb { animation:none; } .agent-card.zoom { animation:none; } #agentModal .modal-panel { transition:opacity .2s !important; transform:none; } }
+    </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-amber-500/30 selection:text-amber-200">
+    <!-- 3D background scene -->
+    <div id="bgScene" aria-hidden="true">
+        <div class="bg-floor"></div>
+        <span class="orb" style="--d:38;--s:520px;left:-8%;top:6%;--c:124,125,255"></span>
+        <span class="orb" style="--d:-26;--s:380px;right:-4%;top:34%;--c:56,189,248;--t:9s"></span>
+        <span class="orb" style="--d:18;--s:300px;left:38%;top:68%;--c:167,139,250;--t:11s"></span>
+        <div class="bg-vignette"></div>
+    </div>
+
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- Main Container -->
+    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        
+        <!-- Top Header & Controls -->
+        <header class="glass-card rounded-2xl p-5 sm:p-6 mb-8 animate-enter" style="animation-delay: 0.05s;">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+                
+                <!-- Brand & Title -->
+                <div class="flex items-start sm:items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400/20 to-amber-600/10 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(124,125,255,0.2)]">
+                        <i class="ph-fill ph-crown text-2xl text-amber-400"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+                                Sales & Booking <span class="text-gold-gradient">Intelligence</span>
+                            </h1>
+                            <span id="dataBadge" class="px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                0 Rekod Aktif
+                            </span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-zinc-400 mt-1">
+                            Analitik Prestasi Ejen, Penjejakan Jualan Terkumpul & Pengurusan Tempahan
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons & Smart Filters -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Week Filter -->
+                    <div class="relative flex-1 sm:flex-none min-w-[155px]">
+                        <label for="weekFilter" class="sr-only">Penapis Minggu</label>
+                        <select id="weekFilter" class="w-full bg-obsidian-900/90 border border-zinc-700/80 hover:border-amber-500/50 text-zinc-200 text-xs sm:text-sm rounded-xl pl-3.5 pr-9 py-2.5 focus:outline-none focus:border-amber-400 transition-colors cursor-pointer">
+                            <option value="ALL">Semua Minggu</option>
+                        </select>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="relative flex-1 sm:flex-none min-w-[165px]">
+                        <label for="statusFilter" class="sr-only">Penapis Status</label>
+                        <select id="statusFilter" class="w-full bg-obsidian-900/90 border border-zinc-700/80 hover:border-amber-500/50 text-zinc-200 text-xs sm:text-sm rounded-xl pl-3.5 pr-9 py-2.5 focus:outline-none focus:border-amber-400 transition-colors cursor-pointer">
+                            <option value="ALL">Semua Status</option>
+                            <option value="COMPLETED">Completed Sahaja</option>
+                            <option value="BOOKED">Booked Sahaja</option>
+                            <option value="LOCKED">Locked Sahaja</option>
+                        </select>
+                    </div>
+
+                    <!-- Google Sheets Cloud Sync Button -->
+                    <button id="cloudSyncBtn" class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-950/50 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer" title="Tetapan & status sync Google Sheets" data-status="off">
+                        <i class="ph-bold ph-google-logo text-base"></i>
+                        <span id="cloudStatusText">Google Sheets</span>
+                    </button>
+
+                    <!-- Hidden File Input -->
+                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden" />
+
+                    <!-- Upload Button -->
+                    <button id="uploadBtn" onclick="document.getElementById('fileInput').click()" class="btn-gold px-4 py-2.5 rounded-xl text-xs sm:text-sm flex items-center gap-2 cursor-pointer">
+                        <i class="ph-bold ph-upload-simple text-base"></i>
+                        <span>Upload Fail (.xlsx / .csv)</span>
+                    </button>
+
+                    <!-- Reset Button -->
+                    <button id="resetBtn" class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-zinc-900/90 hover:bg-red-950/50 text-zinc-300 hover:text-red-400 border border-zinc-800 hover:border-red-500/40 transition-all flex items-center gap-1.5 cursor-pointer" title="Padam semua data (termasuk di Google Sheets)">
+                        <i class="ph-bold ph-trash text-base"></i>
+                        <span class="hidden sm:inline">Reset Data</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs (Analytics vs Commission & Payroll) -->
+            <div class="mt-5 pt-4 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2 bg-obsidian-950/90 p-1.5 rounded-xl border border-zinc-800/90">
+                    <button id="tabDashboardBtn" onclick="switchMainTab('dashboard')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-amber-500 text-obsidian-950 transition-all flex items-center gap-2 cursor-pointer">
+                        <i class="ph-bold ph-chart-polar text-base"></i>
+                        <span>Dashboard Prestasi</span>
+                    </button>
+                    <button id="tabCommissionBtn" onclick="switchMainTab('commission')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold text-zinc-400 hover:text-white transition-all flex items-center gap-2 cursor-pointer">
+                        <i class="ph-bold ph-money text-base"></i>
+                        <span>Commission & Payroll Claim</span>
+                    </button>
+                </div>
+                <div class="text-xs text-zinc-400 flex items-center gap-2">
+                    <i class="ph-fill ph-info text-amber-400"></i>
+                    <span>Penapis <strong>Minggu</strong> & <strong>Status</strong> di atas turut mengemas kini kiraan komisen secara langsung.</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Empty State / Dropzone Banner (Shown when no data or easily accessible) -->
+        <div id="emptyStateBanner" class="glass-card rounded-2xl p-8 sm:p-12 mb-8 text-center border-dashed border-2 border-amber-500/30 animate-enter" style="animation-delay: 0.1s;">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 border border-amber-400/30 flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(124,125,255,0.15)]">
+                <i class="ph-duotone ph-file-xls text-3xl text-amber-400"></i>
+            </div>
+            <h2 class="text-lg sm:text-xl font-bold text-white mb-2">Muat Naik Laporan Jualan Ejen</h2>
+            <p class="text-sm text-zinc-400 max-w-xl mx-auto mb-6">
+                Seret & lepas fail <span class="text-amber-300 font-mono">.xlsx</span> atau <span class="text-amber-300 font-mono">.csv</span> di sini. Sistem akan mengabaikan jadual ringkasan atas secara automatik dan melakukan kemas kini pintar berdasarkan <span class="text-amber-300 font-mono">Booking ID</span>.
+            </p>
+            <div class="flex flex-wrap justify-center gap-3">
+                <button onclick="document.getElementById('fileInput').click()" class="btn-gold px-6 py-3 rounded-xl text-sm inline-flex items-center gap-2 cursor-pointer">
+                    <i class="ph-bold ph-folder-open text-lg"></i>
+                    <span>Pilih Fail Laporan</span>
+                </button>
+                <button id="loadDemoBtn" class="px-5 py-3 rounded-xl text-sm font-semibold bg-obsidian-800 hover:bg-obsidian-700 text-amber-300 border border-amber-500/30 transition-all inline-flex items-center gap-2 cursor-pointer">
+                    <i class="ph-bold ph-sparkle text-lg"></i>
+                    <span>Muat Data Sampel</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Content (Hidden when empty) -->
+        <main id="dashboardContent" class="hidden space-y-8">
+            
+            <!-- 4 KPI Cards -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+                <!-- KPI 1: Total Sales Value -->
+                <div class="glass-card rounded-2xl p-5 sm:p-6 animate-enter" style="animation-delay: 0.1s;">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Total Sales Value</span>
+                        <div class="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-400/25 flex items-center justify-center text-amber-400">
+                            <i class="ph-fill ph-currency-circle-dollar text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-sm font-bold text-amber-400">RM</span>
+                        <h3 id="kpiTotalSales" class="text-2xl sm:text-3xl font-extrabold font-mono text-white tracking-tight">0.00</h3>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs">
+                        <span class="text-zinc-400">Purata / Job:</span>
+                        <span id="kpiAvgSales" class="font-mono font-semibold text-amber-300">RM 0.00</span>
+                    </div>
+                </div>
+
+                <!-- KPI 2: Jumlah Keseluruhan Jobs -->
+                <div class="glass-card rounded-2xl p-5 sm:p-6 animate-enter" style="animation-delay: 0.16s;">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Jumlah Tempahan (Jobs)</span>
+                        <div class="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-400/25 flex items-center justify-center text-amber-400">
+                            <i class="ph-fill ph-briefcase text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <h3 id="kpiTotalJobs" class="text-2xl sm:text-3xl font-extrabold font-mono text-white tracking-tight">0</h3>
+                        <span class="text-xs font-medium text-zinc-400">rekod unik</span>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs">
+                        <span class="text-emerald-400 flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> <span id="kpiCompletedCount">0</span> Completed</span>
+                        <span class="text-amber-400 flex items-center gap-1"><i class="ph-fill ph-lock-key"></i> <span id="kpiBookedLockedCount">0</span> Booked/Locked</span>
+                    </div>
+                </div>
+
+                <!-- KPI 3: Jumlah Jualan Past Client -->
+                <div class="glass-card rounded-2xl p-5 sm:p-6 animate-enter" style="animation-delay: 0.22s;">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Jualan Past Client</span>
+                        <div class="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-400/25 flex items-center justify-center text-amber-400">
+                            <i class="ph-fill ph-arrows-clockwise text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-sm font-bold text-amber-400">RM</span>
+                        <h3 id="kpiPastClientSales" class="text-2xl sm:text-3xl font-extrabold font-mono text-white tracking-tight">0.00</h3>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs">
+                        <span class="text-zinc-400">Sumbangan Repeat:</span>
+                        <span id="kpiPastClientRatio" class="font-mono font-semibold text-amber-300">0% (<span id="kpiPastClientJobs">0</span> jobs)</span>
+                    </div>
+                </div>
+
+                <!-- KPI 4: Top Performing Agent -->
+                <div class="glass-card rounded-2xl p-5 sm:p-6 animate-enter relative overflow-hidden" style="animation-delay: 0.28s;">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-amber-400">Top Performing Agent</span>
+                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-obsidian-950 shadow-[0_0_15px_rgba(124,125,255,0.4)]">
+                            <i class="ph-fill ph-trophy text-xl"></i>
+                        </div>
+                    </div>
+                    <h3 id="kpiTopAgentName" class="text-xl sm:text-2xl font-extrabold text-white truncate" title="-">-</h3>
+                    <div class="mt-3 pt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs">
+                        <span class="text-zinc-400">Jumlah Jualan:</span>
+                        <span id="kpiTopAgentSales" class="font-mono font-bold text-gold-gradient text-sm">RM 0.00</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Trend Chart (2/3 width on desktop) -->
+                <div class="glass-card rounded-2xl p-5 sm:p-6 lg:col-span-2 animate-enter" style="animation-delay: 0.34s;">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                                <i class="ph-duotone ph-chart-line-up text-amber-400 text-xl"></i>
+                                Trend Jualan Mengikut Tarikh
+                            </h2>
+                            <p class="text-xs text-zinc-400">Pergerakan nilai jualan harian (RM) berdasarkan Job Date</p>
+                        </div>
+                        <div class="flex items-center gap-2 bg-obsidian-900/90 p-1 rounded-xl border border-zinc-800 self-start">
+                            <button id="chartTypeLine" class="px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500 text-obsidian-950 transition-all cursor-pointer">Line</button>
+                            <button id="chartTypeBar" class="px-3 py-1 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition-all cursor-pointer">Bar</button>
+                        </div>
+                    </div>
+                    <div class="relative h-[280px] sm:h-[310px] w-full">
+                        <canvas id="salesTrendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Doughnut Chart (1/3 width on desktop) -->
+                <div class="glass-card rounded-2xl p-5 sm:p-6 animate-enter flex flex-col justify-between" style="animation-delay: 0.4s;">
+                    <div class="flex items-start justify-between gap-2 mb-4">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                                <i class="ph-duotone ph-chart-donut text-amber-400 text-xl"></i>
+                                Pecahan Jualan
+                            </h2>
+                            <p id="doughnutSubtitle" class="text-xs text-zinc-400">Nisbah Status Tempahan (RM)</p>
+                        </div>
+                        <div class="flex items-center gap-1 bg-obsidian-900/90 p-1 rounded-xl border border-zinc-800">
+                            <button id="donutModeStatus" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-500 text-obsidian-950 transition-all cursor-pointer">Status</button>
+                            <button id="donutModeCategory" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-zinc-400 hover:text-white transition-all cursor-pointer">Kategori</button>
+                        </div>
+                    </div>
+                    
+                    <div class="relative h-[210px] w-full flex items-center justify-center my-auto">
+                        <canvas id="breakdownChart"></canvas>
+                    </div>
+
+                    <div id="doughnutLegend" class="mt-4 pt-3 border-t border-zinc-800/80 grid grid-cols-2 gap-2 text-xs">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Salesperson Performance Cards Section -->
+            <section class="animate-enter" style="animation-delay: 0.46s;">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2.5">
+                            <i class="ph-duotone ph-users-three text-amber-400 text-2xl"></i>
+                            Prestasi Salesperson <span class="text-xs font-normal text-zinc-400">(Dikumpul mengikut Report Owner)</span>
+                        </h2>
+                        <p class="text-xs sm:text-sm text-zinc-400 mt-0.5">Klik pada mana-mana kad ejen untuk melihat senarai penuh transaksi & perincian tempahan.</p>
+                    </div>
+                    <div class="relative w-full sm:w-64">
+                        <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"></i>
+                        <input type="text" id="agentSearchInput" placeholder="Cari nama ejen..." class="w-full bg-obsidian-900/90 border border-zinc-800 focus:border-amber-400 rounded-xl pl-9 pr-4 py-2 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none transition-colors">
+                    </div>
+                </div>
+
+                <!-- Agent Cards Grid -->
+                <div id="agentCardsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    <!-- Agent cards injected here -->
+                </div>
+            </section>
+
+        </main>
+
+        <!-- COMMISSION & PAYROLL CLAIM SECTION -->
+        <section id="commissionSection" class="hidden space-y-8 animate-enter">
+            
+            <!-- Top Row: Sales Lead Commission Config + Payout Summary Card -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Sales Lead Commission Card -->
+                <div class="glass-card rounded-2xl p-6 lg:col-span-2 border border-amber-500/25">
+                    <div class="flex items-start justify-between gap-4 mb-5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-amber-400">
+                                <i class="ph-fill ph-crown-simple text-2xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-extrabold text-white">Commission Sales Lead (Override Pool)</h2>
+                                <p class="text-xs text-zinc-400">Komisen dikira secara langsung daripada <strong class="text-amber-300">Jumlah Keseluruhan Jualan</strong> berdasarkan penapis semasa.</p>
+                            </div>
+                        </div>
+                        <label class="inline-flex items-center gap-2 bg-obsidian-950 px-3 py-1.5 rounded-xl border border-zinc-800 cursor-pointer">
+                            <input type="checkbox" id="leadIncludeCheck" class="gold-checkbox" checked>
+                            <span class="text-xs font-semibold text-zinc-200">Sertakan dalam PDF</span>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                        <div class="sm:col-span-2">
+                            <label class="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Nama Sales Lead</label>
+                            <input type="text" id="leadNameInput" value="Sales Lead" placeholder="Contoh: Amirul (Lead)" class="w-full bg-obsidian-950 border border-zinc-800 focus:border-amber-400 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Gaji Basic Lead (RM)</label>
+                            <input type="number" id="leadBasicInput" value="0" min="0" step="50" class="w-full bg-obsidian-950 border border-zinc-800 focus:border-amber-400 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold uppercase tracking-wider text-amber-400 mb-1.5">Kadar Comm (% Total Sales)</label>
+                            <div class="relative">
+                                <input type="number" id="leadCommPctInput" value="2" min="0" max="100" step="0.1" class="w-full bg-obsidian-950 border border-amber-500/40 focus:border-amber-400 rounded-xl pl-3.5 pr-8 py-2.5 text-sm font-mono font-bold text-amber-300 focus:outline-none">
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-400">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-4 border-t border-zinc-800/80 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div class="bg-obsidian-950/70 p-3 rounded-xl border border-zinc-800/80">
+                            <span class="text-zinc-400 block">Total Team Sales (Asas Kiraan):</span>
+                            <span id="leadBaseSalesDisplay" class="font-mono font-bold text-white text-sm mt-0.5 block">RM 0.00</span>
+                        </div>
+                        <div class="bg-obsidian-950/70 p-3 rounded-xl border border-zinc-800/80">
+                            <span class="text-zinc-400 block">Jumlah Komisen Lead:</span>
+                            <span id="leadCommAmountDisplay" class="font-mono font-bold text-amber-300 text-sm mt-0.5 block">RM 0.00</span>
+                        </div>
+                        <div class="bg-amber-500/10 p-3 rounded-xl border border-amber-500/30">
+                            <span class="text-amber-200/80 block">Total Payout Sales Lead:</span>
+                            <span id="leadTotalPayoutDisplay" class="font-mono font-extrabold text-gold-gradient text-base mt-0.5 block">RM 0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selected Payroll Grand Total & Export Card -->
+                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between border border-amber-400/30 relative overflow-hidden">
+                    <div class="absolute -right-8 -top-8 w-32 h-32 bg-amber-500/15 rounded-full blur-2xl pointer-events-none"></div>
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                            <i class="ph-fill ph-file-pdf text-base"></i> Ringkasan Payout Dipilih
+                        </span>
+                        <h3 id="selectedGrandTotalDisplay" class="text-3xl sm:text-4xl font-extrabold font-mono text-white mt-2">
+                            RM 0.00
+                        </h3>
+                        <p id="selectedCountDisplay" class="text-xs text-zinc-400 mt-1">
+                            0 penerima dipilih untuk penjanaan slip PDF
+                        </p>
+
+                        <div class="mt-4 space-y-2 text-xs border-t border-zinc-800/80 pt-3">
+                            <div class="flex justify-between">
+                                <span class="text-zinc-400">Jumlah Gaji Basic:</span>
+                                <span id="selectedTotalBasicDisplay" class="font-mono font-semibold text-zinc-200">RM 0.00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-zinc-400">Jumlah Komisen (Lead + Ejen):</span>
+                                <span id="selectedTotalCommDisplay" class="font-mono font-semibold text-amber-300">RM 0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 space-y-2.5">
+                        <div>
+                            <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">Tajuk / Tempoh Penyata PDF</label>
+                            <input type="text" id="pdfPeriodTitle" placeholder="Contoh: Nov 2026 - Minggu 1 & 2" class="w-full bg-obsidian-950 border border-zinc-800 focus:border-amber-400 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                        </div>
+                        <button id="generatePdfBtn" class="btn-gold w-full py-3 px-4 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="ph-bold ph-file-pdf text-lg"></i>
+                            <span>Generate PDF Statement</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agent Commission & Basic Salary Calculator Table -->
+            <div class="glass-card rounded-2xl overflow-hidden border border-amber-500/20">
+                <div class="p-5 sm:p-6 border-b border-zinc-800/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                            <i class="ph-duotone ph-calculator text-amber-400 text-xl"></i>
+                            Jadual Pengiraan Gaji & Komisen Ejen
+                        </h3>
+                        <p class="text-xs text-zinc-400 mt-0.5">
+                            Formula: Jika <span class="text-zinc-200 font-mono">Sales ≥ Target</span> → Layak <strong>Basic</strong> + <span class="text-amber-300 font-mono">(Sales - Target) × % Comm</span>. Jika tidak capai target, Basic = RM 0.
+                        </p>
+                    </div>
+
+                    <!-- Bulk Apply Defaults -->
+                    <div class="flex flex-wrap items-center gap-2 bg-obsidian-950/90 p-2 rounded-xl border border-zinc-800">
+                        <span class="text-[11px] text-zinc-400 px-1.5">Tetapan Pukal:</span>
+                        <input type="number" id="bulkTargetInput" value="5000" class="w-20 bg-obsidian-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs font-mono text-white" title="Target RM">
+                        <input type="number" id="bulkBasicInput" value="2000" class="w-20 bg-obsidian-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs font-mono text-white" title="Basic RM">
+                        <input type="number" id="bulkCommInput" value="10" step="0.5" class="w-16 bg-obsidian-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs font-mono text-amber-300" title="Comm %">
+                        <button id="applyBulkBtn" class="px-3 py-1 rounded-lg text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition-colors cursor-pointer">
+                            Guna Semua
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-obsidian-950/95 border-b border-zinc-800">
+                            <tr class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                                <th class="py-3.5 px-4 text-center w-12">
+                                    <input type="checkbox" id="selectAllAgentsCheck" class="gold-checkbox" checked title="Pilih Semua">
+                                </th>
+                                <th class="py-3.5 px-4">Nama Ejen</th>
+                                <th class="py-3.5 px-4 text-right">Total Sales (RM)</th>
+                                <th class="py-3.5 px-3 text-right w-32">Target (RM)</th>
+                                <th class="py-3.5 px-3 text-right w-32">Basic Gaji (RM)</th>
+                                <th class="py-3.5 px-3 text-right w-24">Comm (%)</th>
+                                <th class="py-3.5 px-4 text-right">Baki Lebihan (RM)</th>
+                                <th class="py-3.5 px-4 text-right">Basic Layak (RM)</th>
+                                <th class="py-3.5 px-4 text-right">Komisen (RM)</th>
+                                <th class="py-3.5 px-5 text-right text-amber-400">Total Payout (RM)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="commissionTableBody" class="divide-y divide-zinc-800/60 text-xs sm:text-sm">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Google Sheets Cloud Backend Modal -->
+    <div id="cloudModal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div class="modal-panel glass-card w-full max-w-2xl max-h-[90vh] rounded-2xl flex flex-col overflow-hidden border border-emerald-500/30">
+            <div class="p-5 sm:p-6 border-b border-zinc-800 bg-obsidian-900/90 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <i class="ph-fill ph-google-logo text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Google Sheets Cloud Backend (Percuma)</h3>
+                        <p class="text-xs text-zinc-400">Simpan & segerakkan rekod jualan serta tetapan komisen untuk GitHub Pages.</p>
+                    </div>
+                </div>
+                <button id="closeCloudModalBtn" class="w-9 h-9 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 flex items-center justify-center cursor-pointer">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-emerald-400 mb-1.5">Google Apps Script Web App URL</label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="url" id="gasUrlInput" placeholder="https://script.google.com/macros/s/AKfycb.../exec" class="flex-1 bg-obsidian-950 border border-zinc-700 focus:border-emerald-400 rounded-xl px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none">
+                        <button id="saveGasUrlBtn" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer">
+                            Simpan URL
+                        </button>
+                    </div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-emerald-400 mt-3 mb-1.5">Kunci Rahsia (pilihan, sama seperti SECRET dalam skrip)</label>
+                    <input type="password" id="gasKeyInput" autocomplete="off" placeholder="Kosongkan jika skrip tiada SECRET" class="w-full bg-obsidian-950 border border-zinc-700 focus:border-emerald-400 rounded-xl px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none">
+                    <p class="text-[11px] text-zinc-500 mt-1.5">Kunci disimpan pada peranti ini sahaja (tidak ada dalam kod GitHub). Masukkan sekali pada setiap peranti baharu.</p>
+                    <p id="cloudLastSync" class="text-[11px] text-zinc-400 mt-2">Belum disegerakkan.</p>
+
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button id="pushToCloudBtn" class="p-3.5 rounded-xl bg-obsidian-900 hover:bg-obsidian-800 border border-amber-500/30 text-amber-300 font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all">
+                        <i class="ph-bold ph-cloud-arrow-up text-lg"></i>
+                        <span>Hantar Paksa (peranti ini &rarr; awan)</span>
+                    </button>
+                    <button id="pullFromCloudBtn" class="p-3.5 rounded-xl bg-obsidian-900 hover:bg-obsidian-800 border border-emerald-500/30 text-emerald-300 font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all">
+                        <i class="ph-bold ph-cloud-arrow-down text-lg"></i>
+                        <span>Tarik Paksa (awan &rarr; peranti ini)</span>
+                    </button>
+                </div>
+
+                <!-- Step-by-Step Setup Guide -->
+                <div class="bg-obsidian-950/90 rounded-xl p-4 border border-zinc-800 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-white text-xs">Cara Setup Google Sheets Backend (2 Minit):</span>
+                        <button id="copyGasCodeBtn" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-amber-300 text-[11px] font-semibold flex items-center gap-1 cursor-pointer">
+                            <i class="ph-bold ph-copy"></i> Salin Kod Skrip
+                        </button>
+                    </div>
+                    <ol class="list-decimal list-inside text-xs text-zinc-400 space-y-1">
+                        <li>Buka <strong>Google Sheets</strong> baharu, klik <span class="text-zinc-200">Extensions &gt; Apps Script</span>.</li>
+                        <li>Padam kod asal, tampal kod di bawah. Pilihan: isi <span class="text-zinc-200 font-mono">SECRET</span> dengan kata laluan anda.</li>
+                        <li><strong>Deploy &gt; New deployment</strong> &gt; <strong>Web app</strong>, <em>Execute as: Me</em>, <em>Who has access: Anyone</em>.</li>
+                        <li>Jika sudah ada deployment lama: <strong>Deploy &gt; Manage deployments</strong> &gt; ikon pensel &gt; <em>Version: New version</em> &gt; Deploy (URL kekal sama).</li>
+                        <li>Data akan disegerakkan secara automatik selepas upload fail atau ubah tetapan gaji.</li>
+                    </ol>
+                    <pre id="gasScriptCode" class="bg-black/80 p-3 rounded-lg border border-zinc-800 text-[11px] font-mono text-emerald-300 overflow-x-auto select-all">/**
+ * Sales &amp; Booking Dashboard - Backend v2 (Google Apps Script)
+ * - Data disimpan dalam helaian "DB" (dipecah kepada bahagian kecil, tiada had 50,000 aksara)
+ * - Kunci rahsia pilihan: isi SECRET di bawah supaya hanya anda boleh baca/tulis data
+ */
+var SECRET = '';          // contoh: 'kata-laluan-saya'  (kosong = tanpa kunci)
+var SHEET_NAME = 'DB';
+var CHUNK = 40000;
+
+function getSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  return ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+}
+
+function json_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(e) {
+  if (SECRET &amp;&amp; (!e || !e.parameter || e.parameter.key !== SECRET)) {
+    return json_({ error: 'unauthorized' });
+  }
+  var sh = getSheet_();
+  var last = sh.getLastRow();
+  var text = '';
+  if (last &gt;= 1) {
+    text = sh.getRange(1, 1, last, 1).getValues()
+      .map(function (r) { return r[0]; }).join('');
+  }
+  if (!text) {
+    // Sokongan data lama (versi 1: disimpan di sel A1 helaian pertama)
+    var old = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0].getRange(1, 1).getValue();
+    if (typeof old === 'string' &amp;&amp; old.charAt(0) === '{') text = old;
+  }
+  return ContentService.createTextOutput(text || '{"records":[],"payroll":{}}')
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var data = JSON.parse(e.postData.contents);
+    if (SECRET &amp;&amp; data.key !== SECRET) return json_({ error: 'unauthorized' });
+    delete data.key;
+
+    var text = JSON.stringify(data);
+    var rows = [];
+    for (var i = 0; i &lt; text.length; i += CHUNK) {
+      rows.push([text.substring(i, i + CHUNK)]);
+    }
+
+    var sh = getSheet_();
+    sh.clear();
+    var range = sh.getRange(1, 1, rows.length, 1);
+    range.setNumberFormat('@');            // paksa teks supaya tidak ditukar jadi nombor/formula
+    range.setValues(rows);
+    sh.getRange(1, 3).setValue('Last Sync: ' + new Date().toISOString());
+
+    return json_({ status: 'ok', records: (data.records || []).length });
+  } catch (err) {
+    return json_({ error: String(err) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Transactions Modal -->
+    <div id="agentModal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md">
+        <div class="modal-panel glass-card w-full max-w-6xl max-h-[90vh] rounded-2xl flex flex-col overflow-hidden border border-amber-500/30 shadow-[0_25px_70px_rgba(0,0,0,0.9)]">
+            
+            <!-- Modal Header -->
+            <div class="p-5 sm:p-6 border-b border-zinc-800/90 bg-obsidian-900/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div id="modalAgentAvatar" class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-obsidian-950 font-extrabold text-lg flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(124,125,255,0.35)]">
+                        AG
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <h3 id="modalAgentName" class="text-lg sm:text-xl font-extrabold text-white">Nama Ejen</h3>
+                            <span id="modalAgentRank" class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                #1 Top Performer
+                            </span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400 mt-1">
+                            <span>Jumlah Jualan: <strong id="modalTotalSales" class="text-amber-400 font-mono">RM 0.00</strong></span>
+                            <span>•</span>
+                            <span>Completed: <strong id="modalCompletedSales" class="text-emerald-400 font-mono">RM 0.00</strong></span>
+                            <span>•</span>
+                            <span>Booked/Locked: <strong id="modalPendingSales" class="text-amber-300 font-mono">RM 0.00</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 self-end sm:self-center">
+                    <div class="relative">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs"></i>
+                        <input type="text" id="modalSearchInput" placeholder="Cari Booking ID / Pelanggan..." class="bg-obsidian-950 border border-zinc-800 focus:border-amber-400 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none w-48 sm:w-56">
+                    </div>
+                    <button id="closeModalBtn" class="w-9 h-9 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer" title="Tutup">
+                        <i class="ph-bold ph-x text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Table Body -->
+            <div class="overflow-auto flex-1 p-0">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-obsidian-950/95 sticky top-0 z-10 border-b border-zinc-800">
+                        <tr class="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                            <th class="py-3.5 px-4 sm:px-5">Booking ID</th>
+                            <th class="py-3.5 px-4">Job Date</th>
+                            <th class="py-3.5 px-4">Customer</th>
+                            <th class="py-3.5 px-4">Area</th>
+                            <th class="py-3.5 px-4">Service</th>
+                            <th class="py-3.5 px-4">Kategori</th>
+                            <th class="py-3.5 px-4">Status</th>
+                            <th class="py-3.5 px-4 sm:px-5 text-right">Sales Value (RM)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modalTransactionsBody" class="divide-y divide-zinc-800/60 text-xs sm:text-sm">
+                        <!-- Rows populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 px-6 border-t border-zinc-800/90 bg-obsidian-900/90 flex items-center justify-between text-xs text-zinc-400">
+                <span id="modalRowCount">Memaparkan 0 transaksi</span>
+                <button onclick="closeAgentModal()" class="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-semibold transition-colors cursor-pointer">
+                    Tutup Paparan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Reset Modal (Custom replacement for window.confirm) -->
+    <div id="confirmModal" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="modal-panel glass-card w-full max-w-md rounded-2xl p-6 border border-red-500/30">
+            <div class="w-12 h-12 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 mb-4">
+                <i class="ph-fill ph-warning-circle text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Padam Semua Data Laporan?</h3>
+            <p class="text-sm text-zinc-400 mb-6">
+                Tindakan ini akan memadam semua rekod jualan di pelayar ini <strong class="text-zinc-200">dan di Google Sheets</strong>, jadi peranti lain juga akan kosong. Tetapan gaji &amp; komisen tidak dipadam. Anda perlu memuat naik semula fail laporan selepas ini.
+            </p>
+            <div class="flex items-center justify-end gap-3">
+                <button id="cancelResetBtn" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 transition-colors cursor-pointer">
+                    Batal
+                </button>
+                <button id="confirmResetBtn" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-red-600 hover:bg-red-500 text-white shadow-[0_4px_15px_rgba(220,38,38,0.4)] transition-all cursor-pointer">
+                    Ya, Reset Data
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        /**
+         * ============================================================================
+         * SALES & BOOKING INTELLIGENCE DASHBOARD - CORE ENGINE
+         * ============================================================================
+         * 1. Storage & Cumulative Upsert Engine (Booking ID as Primary Key)
+         * 2. Multi-Block Excel/CSV Parser (Ignores top Summary table, scans repeated headers)
+         * 3. Dynamic Week Generator from Job Date ranges
+         * 4. Chart.js Data Visualizations (Trend Line/Bar & Status/Category Doughnut)
+         * 5. Interactive Agent Cards & Transaction Inspection Modal
+         * 6. Commission & Payroll Claim Calculator + Pro PDF Generator
+         * 7. Google Sheets Apps Script Cloud Sync (auto push/pull, gabung data, status sync)
+         */
+
+        // ---- Storage keys (localStorage) ----
+        const STORAGE_KEY = 'sales_booking_intelligence_records_v1';
+        const PAYROLL_STORAGE_KEY = 'sales_booking_payroll_config_v1';
+        const GAS_URL_STORAGE_KEY = 'sales_booking_gas_url_v1';
+        const GAS_KEY_STORAGE_KEY = 'sales_booking_gas_key_v1';
+        const SYNC_META_KEY = 'sales_booking_sync_meta_v2';
+
+        // ---- Google Apps Script Web App URL (tetap, supaya semua peranti terus tersambung) ----
+        const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyZd3ap0cJsLq10TqxBqm_SJ2UX4F5nUkTdiZVS61Zt6rDX0qXnvtRQMPTvdj5m3S9t_A/exec';
+
+        // ---- Sync tuning ----
+        const SYNC_DEBOUNCE_MS = 1500;      // tunggu selepas perubahan terakhir sebelum hantar
+        const FOCUS_PULL_MIN_GAP_MS = 20000; // jarak minimum antara tarik data automatik bila tab dibuka semula
+
+        // Global Application State
+        let state = {
+            recordsMap: new Map(), // Key: Booking ID -> Object
+            filteredRecords: [],
+            activeTab: 'dashboard', // 'dashboard' | 'commission'
+            selectedWeek: 'ALL',
+            selectedStatus: 'ALL',
+            agentSearch: '',
+            trendChartType: 'line', // 'line' | 'bar'
+            doughnutMode: 'status', // 'status' | 'category'
+            activeModalAgent: null,
+            activeModalRecords: [],
+            gasUrl: '',
+            gasKey: '',
+            demoMode: false, // data sampel: tidak disimpan & tidak disegerakkan
+            sync: {
+                recordsAt: 0,   // masa terakhir rekod diubah (ms)
+                payrollAt: 0,   // masa terakhir tetapan gaji diubah (ms)
+                dirty: false,   // ada perubahan belum dihantar ke awan
+                version: 0,     // pembilang perubahan (untuk kesan perubahan semasa penghantaran)
+                lastSync: 0,
+                status: 'off',  // off | syncing | synced | dirty | error | auth
+                lastPullAt: 0
+            },
+            payrollConfig: {
+                leadName: 'Sales Lead',
+                leadBasic: 0,
+                leadCommPct: 2,
+                leadIncluded: true,
+                agents: {} // Key: agentName -> { target: 5000, basic: 2000, commPct: 10, included: true }
+            },
+            charts: {
+                trend: null,
+                breakdown: null
+            }
+        };
+
+        // DOM Elements Cache
+        const els = {
+            fileInput: document.getElementById('fileInput'),
+            weekFilter: document.getElementById('weekFilter'),
+            statusFilter: document.getElementById('statusFilter'),
+            resetBtn: document.getElementById('resetBtn'),
+            loadDemoBtn: document.getElementById('loadDemoBtn'),
+            dataBadge: document.getElementById('dataBadge'),
+            emptyStateBanner: document.getElementById('emptyStateBanner'),
+            dashboardContent: document.getElementById('dashboardContent'),
+            commissionSection: document.getElementById('commissionSection'),
+            tabDashboardBtn: document.getElementById('tabDashboardBtn'),
+            tabCommissionBtn: document.getElementById('tabCommissionBtn'),
+            // Cloud Sync
+            cloudSyncBtn: document.getElementById('cloudSyncBtn'),
+            cloudStatusText: document.getElementById('cloudStatusText'),
+            cloudModal: document.getElementById('cloudModal'),
+            closeCloudModalBtn: document.getElementById('closeCloudModalBtn'),
+            gasUrlInput: document.getElementById('gasUrlInput'),
+            gasKeyInput: document.getElementById('gasKeyInput'),
+            cloudLastSync: document.getElementById('cloudLastSync'),
+            saveGasUrlBtn: document.getElementById('saveGasUrlBtn'),
+            pushToCloudBtn: document.getElementById('pushToCloudBtn'),
+            pullFromCloudBtn: document.getElementById('pullFromCloudBtn'),
+            copyGasCodeBtn: document.getElementById('copyGasCodeBtn'),
+            gasScriptCode: document.getElementById('gasScriptCode'),
+            // Commission & Payroll
+            leadIncludeCheck: document.getElementById('leadIncludeCheck'),
+            leadNameInput: document.getElementById('leadNameInput'),
+            leadBasicInput: document.getElementById('leadBasicInput'),
+            leadCommPctInput: document.getElementById('leadCommPctInput'),
+            leadBaseSalesDisplay: document.getElementById('leadBaseSalesDisplay'),
+            leadCommAmountDisplay: document.getElementById('leadCommAmountDisplay'),
+            leadTotalPayoutDisplay: document.getElementById('leadTotalPayoutDisplay'),
+            selectedGrandTotalDisplay: document.getElementById('selectedGrandTotalDisplay'),
+            selectedCountDisplay: document.getElementById('selectedCountDisplay'),
+            selectedTotalBasicDisplay: document.getElementById('selectedTotalBasicDisplay'),
+            selectedTotalCommDisplay: document.getElementById('selectedTotalCommDisplay'),
+            pdfPeriodTitle: document.getElementById('pdfPeriodTitle'),
+            generatePdfBtn: document.getElementById('generatePdfBtn'),
+            bulkTargetInput: document.getElementById('bulkTargetInput'),
+            bulkBasicInput: document.getElementById('bulkBasicInput'),
+            bulkCommInput: document.getElementById('bulkCommInput'),
+            applyBulkBtn: document.getElementById('applyBulkBtn'),
+            selectAllAgentsCheck: document.getElementById('selectAllAgentsCheck'),
+            commissionTableBody: document.getElementById('commissionTableBody'),
+            // KPIs
+            kpiTotalSales: document.getElementById('kpiTotalSales'),
+            kpiAvgSales: document.getElementById('kpiAvgSales'),
+            kpiTotalJobs: document.getElementById('kpiTotalJobs'),
+            kpiCompletedCount: document.getElementById('kpiCompletedCount'),
+            kpiBookedLockedCount: document.getElementById('kpiBookedLockedCount'),
+            kpiPastClientSales: document.getElementById('kpiPastClientSales'),
+            kpiPastClientRatio: document.getElementById('kpiPastClientRatio'),
+            kpiPastClientJobs: document.getElementById('kpiPastClientJobs'),
+            kpiTopAgentName: document.getElementById('kpiTopAgentName'),
+            kpiTopAgentSales: document.getElementById('kpiTopAgentSales'),
+            // Charts
+            chartTypeLine: document.getElementById('chartTypeLine'),
+            chartTypeBar: document.getElementById('chartTypeBar'),
+            donutModeStatus: document.getElementById('donutModeStatus'),
+            donutModeCategory: document.getElementById('donutModeCategory'),
+            doughnutSubtitle: document.getElementById('doughnutSubtitle'),
+            doughnutLegend: document.getElementById('doughnutLegend'),
+            // Agents
+            agentSearchInput: document.getElementById('agentSearchInput'),
+            agentCardsGrid: document.getElementById('agentCardsGrid'),
+            // Agent Modal
+            agentModal: document.getElementById('agentModal'),
+            closeModalBtn: document.getElementById('closeModalBtn'),
+            modalAgentAvatar: document.getElementById('modalAgentAvatar'),
+            modalAgentName: document.getElementById('modalAgentName'),
+            modalAgentRank: document.getElementById('modalAgentRank'),
+            modalTotalSales: document.getElementById('modalTotalSales'),
+            modalCompletedSales: document.getElementById('modalCompletedSales'),
+            modalPendingSales: document.getElementById('modalPendingSales'),
+            modalSearchInput: document.getElementById('modalSearchInput'),
+            modalTransactionsBody: document.getElementById('modalTransactionsBody'),
+            modalRowCount: document.getElementById('modalRowCount'),
+            // Confirm Reset Modal
+            confirmModal: document.getElementById('confirmModal'),
+            cancelResetBtn: document.getElementById('cancelResetBtn'),
+            confirmResetBtn: document.getElementById('confirmResetBtn'),
+            toastContainer: document.getElementById('toastContainer')
+        };
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            loadFromLocalStorage();
+            setupEventListeners();
+            renderApp();
+            updateSyncUI();
+
+            // Peranti baharu / buka semula: tarik data terkini dari Google Sheets secara automatik
+            if (getCloudBase()) {
+                els.emptyStateBanner.classList.add('opacity-40', 'pointer-events-none');
+                await pullFromCloud({ silent: true });
+                els.emptyStateBanner.classList.remove('opacity-40', 'pointer-events-none');
+            }
+
+            // Bila tab/aplikasi dibuka semula, ambil perubahan dari peranti lain
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState !== 'visible') return;
+                if (state.sync.dirty || state.sync.status === 'syncing') return;
+                if (Date.now() - state.sync.lastPullAt < FOCUS_PULL_MIN_GAP_MS) return;
+                pullFromCloud({ silent: true });
+            });
+
+            // Amaran jika masih ada data belum sempat dihantar
+            window.addEventListener('beforeunload', (e) => {
+                if (!state.demoMode && (state.sync.dirty || state.sync.status === 'syncing')) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
+        });
+
+        function setupEventListeners() {
+            // File Upload
+            els.fileInput.addEventListener('change', handleFileUpload);
+
+            // Drag & Drop support on body/empty banner
+            document.body.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                els.emptyStateBanner.classList.add('border-amber-400', 'bg-amber-500/5');
+            });
+            document.body.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                els.emptyStateBanner.classList.remove('border-amber-400', 'bg-amber-500/5');
+            });
+            document.body.addEventListener('drop', (e) => {
+                e.preventDefault();
+                els.emptyStateBanner.classList.remove('border-amber-400', 'bg-amber-500/5');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    processUploadedFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            // Filters
+            els.weekFilter.addEventListener('change', (e) => {
+                state.selectedWeek = e.target.value;
+                renderApp();
+            });
+
+            els.statusFilter.addEventListener('change', (e) => {
+                state.selectedStatus = e.target.value;
+                renderApp();
+            });
+
+            els.agentSearchInput.addEventListener('input', (e) => {
+                state.agentSearch = e.target.value.trim().toLowerCase();
+                renderAgentCards();
+            });
+
+            // Chart Controls
+            els.chartTypeLine.addEventListener('click', () => {
+                state.trendChartType = 'line';
+                updateChartToggleUI();
+                renderTrendChart();
+            });
+            els.chartTypeBar.addEventListener('click', () => {
+                state.trendChartType = 'bar';
+                updateChartToggleUI();
+                renderTrendChart();
+            });
+
+            els.donutModeStatus.addEventListener('click', () => {
+                state.doughnutMode = 'status';
+                updateChartToggleUI();
+                renderDoughnutChart();
+            });
+            els.donutModeCategory.addEventListener('click', () => {
+                state.doughnutMode = 'category';
+                updateChartToggleUI();
+                renderDoughnutChart();
+            });
+
+            // Reset Data Flow
+            els.resetBtn.addEventListener('click', () => {
+                if (state.recordsMap.size === 0) {
+                    showToast('Tiada data untuk dipadam.', 'info');
+                    return;
+                }
+                els.confirmModal.classList.add('active');
+            });
+            els.cancelResetBtn.addEventListener('click', () => {
+                els.confirmModal.classList.remove('active');
+            });
+            els.confirmResetBtn.addEventListener('click', () => {
+                const wasDemo = state.demoMode;
+                state.recordsMap.clear();
+                state.demoMode = false;
+                localStorage.removeItem(STORAGE_KEY);
+                if (!wasDemo) markChanged('records'); // hantar keadaan kosong ke awan juga
+                state.selectedWeek = 'ALL';
+                state.selectedStatus = 'ALL';
+                els.weekFilter.value = 'ALL';
+                els.statusFilter.value = 'ALL';
+                els.confirmModal.classList.remove('active');
+                renderApp();
+                showToast('Semua data berjaya dipadam.', 'success');
+            });
+
+            // Commission & Payroll Event Listeners
+            els.leadIncludeCheck.addEventListener('change', (e) => {
+                state.payrollConfig.leadIncluded = e.target.checked;
+                savePayrollConfig();
+                renderCommissionSection();
+            });
+            els.leadNameInput.addEventListener('input', (e) => {
+                state.payrollConfig.leadName = e.target.value;
+                savePayrollConfig();
+            });
+            els.leadBasicInput.addEventListener('input', (e) => {
+                state.payrollConfig.leadBasic = parseFloat(e.target.value) || 0;
+                savePayrollConfig();
+                renderCommissionSection();
+            });
+            els.leadCommPctInput.addEventListener('input', (e) => {
+                state.payrollConfig.leadCommPct = parseFloat(e.target.value) || 0;
+                savePayrollConfig();
+                renderCommissionSection();
+            });
+
+            els.applyBulkBtn.addEventListener('click', () => {
+                const t = parseFloat(els.bulkTargetInput.value) || 0;
+                const b = parseFloat(els.bulkBasicInput.value) || 0;
+                const c = parseFloat(els.bulkCommInput.value) || 0;
+                Object.keys(state.payrollConfig.agents).forEach(ag => {
+                    state.payrollConfig.agents[ag].target = t;
+                    state.payrollConfig.agents[ag].basic = b;
+                    state.payrollConfig.agents[ag].commPct = c;
+                });
+                savePayrollConfig();
+                renderCommissionSection();
+                showToast('Tetapan Target, Basic & Comm berjaya digunakan kepada semua ejen.', 'success');
+            });
+
+            els.selectAllAgentsCheck.addEventListener('change', (e) => {
+                const checked = e.target.checked;
+                Object.keys(state.payrollConfig.agents).forEach(ag => {
+                    state.payrollConfig.agents[ag].included = checked;
+                });
+                savePayrollConfig();
+                renderCommissionSection();
+            });
+
+            els.generatePdfBtn.addEventListener('click', generatePayrollPDF);
+
+            // Google Sheets Cloud Modal Listeners
+            els.cloudSyncBtn.addEventListener('click', () => {
+                openCloudModal();
+            });
+            els.closeCloudModalBtn.addEventListener('click', () => {
+                els.cloudModal.classList.remove('active');
+            });
+            els.cloudModal.addEventListener('click', (e) => {
+                if (e.target === els.cloudModal) els.cloudModal.classList.remove('active');
+            });
+            els.saveGasUrlBtn.addEventListener('click', async () => {
+                state.gasUrl = els.gasUrlInput.value.trim();
+                state.gasKey = els.gasKeyInput.value.trim();
+                localStorage.setItem(GAS_URL_STORAGE_KEY, state.gasUrl);
+                localStorage.setItem(GAS_KEY_STORAGE_KEY, state.gasKey);
+                updateSyncUI();
+                showToast('Tetapan Google Sheets disimpan. Menyemak sambungan...', 'success');
+                await pullFromCloud({ silent: false });
+            });
+            els.copyGasCodeBtn.addEventListener('click', () => {
+                const textarea = document.createElement('textarea');
+                textarea.value = els.gasScriptCode.textContent;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('Kod Google Apps Script berjaya disalin!', 'success');
+            });
+            els.pushToCloudBtn.addEventListener('click', () => pushToCloud({ silent: false }));
+            els.pullFromCloudBtn.addEventListener('click', () => pullFromCloud({ silent: false, force: true }));
+
+            // Demo Data Loader
+            els.loadDemoBtn.addEventListener('click', loadDemoData);
+
+            // Agent Modal Controls
+            els.closeModalBtn.addEventListener('click', closeAgentModal);
+            els.agentModal.addEventListener('click', (e) => {
+                if (e.target === els.agentModal) closeAgentModal();
+            });
+            els.modalSearchInput.addEventListener('input', (e) => {
+                renderModalTable(e.target.value.trim().toLowerCase());
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeAgentModal();
+                    els.confirmModal.classList.remove('active');
+                    els.cloudModal.classList.remove('active');
+                }
+            });
+        }
+
+        // ============================================================================
+        // DATA PERSISTENCE & CLOUD SYNC
+        // ----------------------------------------------------------------------------
+        // Aliran: ubah data -> simpan di pelayar -> hantar automatik ke Google Sheets.
+        // Peranti lain: tarik automatik semasa dibuka (dan bila tab aktif semula).
+        // ============================================================================
+        let syncTimer = null;
+        let pushInFlight = false;
+
+        function loadFromLocalStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsedArray = JSON.parse(raw);
+                    if (Array.isArray(parsedArray)) {
+                        state.recordsMap = new Map(parsedArray.map(item => [item.bookingId, item]));
+                    }
+                }
+                const rawPayroll = localStorage.getItem(PAYROLL_STORAGE_KEY);
+                if (rawPayroll) {
+                    state.payrollConfig = { ...state.payrollConfig, ...JSON.parse(rawPayroll) };
+                }
+                const meta = JSON.parse(localStorage.getItem(SYNC_META_KEY) || '{}');
+                state.sync.recordsAt = meta.recordsAt || 0;
+                state.sync.payrollAt = meta.payrollAt || 0;
+                state.sync.dirty = !!meta.dirty;
+                state.sync.lastSync = meta.lastSync || 0;
+                // Data lama (sebelum ada sistem sync) dianggap belum dihantar supaya tidak hilang
+                if (!localStorage.getItem(SYNC_META_KEY) && state.recordsMap.size > 0) {
+                    state.sync.dirty = true;
+                    state.sync.recordsAt = Date.now();
+                }
+            } catch (err) {
+                console.error('Gagal membaca localStorage:', err);
+            }
+            state.gasUrl = localStorage.getItem(GAS_URL_STORAGE_KEY) || DEFAULT_GAS_URL;
+            state.gasKey = localStorage.getItem(GAS_KEY_STORAGE_KEY) || '';
+            syncLeadInputsFromState();
+        }
+
+        function saveSyncMeta() {
+            try {
+                const { recordsAt, payrollAt, dirty, lastSync } = state.sync;
+                localStorage.setItem(SYNC_META_KEY, JSON.stringify({ recordsAt, payrollAt, dirty, lastSync }));
+            } catch (err) { console.error('Gagal menyimpan meta sync:', err); }
+        }
+
+        // Tulis ke pelayar sahaja (tanpa tanda "perubahan baharu")
+        function writeRecordsLocal() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(state.recordsMap.values())));
+            } catch (err) { console.error('Gagal menyimpan ke localStorage:', err); }
+        }
+        function writePayrollLocal() {
+            try {
+                localStorage.setItem(PAYROLL_STORAGE_KEY, JSON.stringify(state.payrollConfig));
+            } catch (err) { console.error('Gagal menyimpan tetapan gaji:', err); }
+        }
+
+        // Dipanggil selepas upload / reset. Simpan + jadualkan hantar ke awan.
+        function saveToLocalStorage() {
+            if (state.demoMode) return;
+            writeRecordsLocal();
+            markChanged('records');
+        }
+        // Dipanggil setiap kali tetapan gaji/komisen berubah.
+        function savePayrollConfig() {
+            writePayrollLocal();
+            markChanged('payroll');
+        }
+
+        function markChanged(kind) {
+            if (state.demoMode) return;
+            const now = Date.now();
+            if (kind === 'records') state.sync.recordsAt = Math.max(now, state.sync.recordsAt + 1);
+            if (kind === 'payroll') state.sync.payrollAt = Math.max(now, state.sync.payrollAt + 1);
+            state.sync.dirty = true;
+            state.sync.version++;
+            saveSyncMeta();
+            setSyncStatus('dirty');
+            scheduleSync();
+        }
+
+        function scheduleSync() {
+            if (!getCloudBase()) return;
+            clearTimeout(syncTimer);
+            syncTimer = setTimeout(() => pushToCloud({ silent: true }), SYNC_DEBOUNCE_MS);
+        }
+
+        function getCloudBase() {
+            return state.gasUrl || DEFAULT_GAS_URL || '';
+        }
+
+        function buildCloudUrl(withCacheBust) {
+            const url = new URL(getCloudBase());
+            if (state.gasKey) url.searchParams.set('key', state.gasKey);
+            if (withCacheBust) url.searchParams.set('_', Date.now());
+            return url.toString();
+        }
+
+        async function fetchCloud() {
+            const res = await fetch(buildCloudUrl(true), { cache: 'no-store' });
+            const data = await res.json();
+            if (data && data.error === 'unauthorized') throw new Error('UNAUTHORIZED');
+            if (data && data.error) throw new Error(data.error);
+            return data || {};
+        }
+
+        // ---- PULL: tarik & gabung data awan ----
+        async function pullFromCloud({ silent = false, force = false } = {}) {
+            if (!getCloudBase()) {
+                if (!silent) showToast('Sila masukkan URL Google Apps Script terlebih dahulu.', 'error');
+                return;
+            }
+            if (state.demoMode && !force) return;
+            const prevStatus = state.sync.status;
+            setSyncStatus('syncing');
+            try {
+                const cloud = await fetchCloud();
+                const cloudRecords = Array.isArray(cloud.records) ? cloud.records : [];
+                const cloudRecAt = cloud.recordsUpdatedAt || 0;
+                const cloudPayAt = cloud.payrollUpdatedAt || 0;
+                const cloudPayroll = cloud.payroll && typeof cloud.payroll === 'object' ? cloud.payroll : null;
+                let needPush = false;
+
+                // --- Rekod jualan ---
+                if (force) {
+                    state.demoMode = false;
+                    state.recordsMap = new Map(cloudRecords.map(r => [r.bookingId, r]));
+                    state.sync.recordsAt = cloudRecAt;
+                    writeRecordsLocal();
+                } else if (state.sync.dirty) {
+                    // Ada perubahan tempatan belum dihantar: gabung (rekod tempatan menang jika ID sama)
+                    const merged = new Map(cloudRecords.map(r => [r.bookingId, r]));
+                    state.recordsMap.forEach((r, id) => merged.set(id, r));
+                    state.recordsMap = merged;
+                    writeRecordsLocal();
+                    needPush = true;
+                } else if (cloudRecords.length > 0 || cloudRecAt > state.sync.recordsAt) {
+                    // Awan lebih terkini (atau sengaja dikosongkan dari peranti lain)
+                    state.demoMode = false;
+                    state.recordsMap = new Map(cloudRecords.map(r => [r.bookingId, r]));
+                    state.sync.recordsAt = cloudRecAt;
+                    writeRecordsLocal();
+                } else if (state.recordsMap.size > 0 && !state.demoMode) {
+                    // Awan kosong tetapi peranti ini ada data: naikkan ke awan
+                    state.sync.recordsAt = state.sync.recordsAt || Date.now();
+                    needPush = true;
+                }
+
+                // --- Tetapan gaji & komisen ---
+                const cloudHasPayroll = cloudPayroll && Object.keys(cloudPayroll).length > 0;
+                if (cloudHasPayroll && (force || cloudPayAt > state.sync.payrollAt || (state.sync.payrollAt === 0 && !state.sync.dirty))) {
+                    state.payrollConfig = {
+                        leadName: 'Sales Lead', leadBasic: 0, leadCommPct: 2, leadIncluded: true,
+                        ...cloudPayroll,
+                        agents: { ...(cloudPayroll.agents || {}) }
+                    };
+                    state.sync.payrollAt = cloudPayAt;
+                    writePayrollLocal();
+                    syncLeadInputsFromState();
+                } else if (state.sync.payrollAt > cloudPayAt) {
+                    needPush = true;
+                }
+
+                state.sync.lastPullAt = Date.now();
+                saveSyncMeta();
+                renderApp();
+
+                if (needPush && !force) {
+                    state.sync.dirty = true;
+                    await pushToCloud({ silent: true });
+                } else {
+                    state.sync.dirty = false;
+                    state.sync.lastSync = Date.now();
+                    saveSyncMeta();
+                    setSyncStatus('synced');
+                }
+
+                if (!silent) {
+                    showToast(`Berjaya menarik data dari Google Sheets (${state.recordsMap.size} rekod).`, 'success');
+                } else if (state.recordsMap.size > 0 && prevStatus !== 'synced') {
+                    showToast(`Data awan disegerakkan (${state.recordsMap.size} rekod).`, 'success');
+                }
+            } catch (err) {
+                handleSyncError(err, silent, 'menarik');
+            }
+        }
+
+        // ---- PUSH: hantar data peranti ini ke awan ----
+        async function pushToCloud({ silent = false } = {}) {
+            if (!getCloudBase()) {
+                if (!silent) showToast('Sila masukkan URL Google Apps Script terlebih dahulu.', 'error');
+                return;
+            }
+            if (state.demoMode) {
+                if (!silent) showToast('Data sampel tidak dihantar ke awan. Upload fail sebenar dahulu.', 'info');
+                return;
+            }
+            if (pushInFlight) {
+                scheduleSync(); // sedang menghantar; cuba semula selepas ini
+                return;
+            }
+            pushInFlight = true;
+            clearTimeout(syncTimer);
+            const versionAtStart = state.sync.version;
+            setSyncStatus('syncing');
+            try {
+                if (!silent) showToast('Menghantar data ke Google Sheets...', 'info');
+                const payload = {
+                    version: 2,
+                    records: Array.from(state.recordsMap.values()),
+                    recordsUpdatedAt: state.sync.recordsAt || Date.now(),
+                    payroll: state.payrollConfig,
+                    payrollUpdatedAt: state.sync.payrollAt || 0,
+                    key: state.gasKey || undefined
+                };
+                await postToCloud(payload);
+
+                state.sync.lastSync = Date.now();
+                // Jika data berubah semasa menghantar, kekalkan status "belum dihantar"
+                if (state.sync.version === versionAtStart) {
+                    state.sync.dirty = false;
+                    saveSyncMeta();
+                    setSyncStatus('synced');
+                } else {
+                    saveSyncMeta();
+                    setSyncStatus('dirty');
+                    scheduleSync();
+                }
+                if (!silent) showToast(`Berjaya dihantar ke Google Sheets (${payload.records.length} rekod).`, 'success');
+            } catch (err) {
+                handleSyncError(err, silent, 'menghantar');
+            } finally {
+                pushInFlight = false;
+            }
+        }
+
+        async function postToCloud(payload) {
+            const body = JSON.stringify(payload);
+            try {
+                // text/plain = "simple request" (tiada preflight CORS) yang diterima Apps Script
+                const res = await fetch(getCloudBase(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body
+                });
+                const out = await res.json();
+                if (out && out.error === 'unauthorized') throw new Error('UNAUTHORIZED');
+                if (!out || out.status !== 'ok') throw new Error((out && out.error) || 'Respons tidak sah dari skrip.');
+            } catch (err) {
+                if (err.message === 'UNAUTHORIZED' || !(err instanceof TypeError)) throw err;
+                // Pelayar menyekat bacaan respons: hantar tanpa respons, kemudian sahkan dengan GET
+                await fetch(getCloudBase(), { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
+                await new Promise(r => setTimeout(r, 1500));
+                const check = await fetchCloud();
+                const okCount = Array.isArray(check.records) && check.records.length === payload.records.length;
+                if (!okCount || (check.recordsUpdatedAt || 0) !== payload.recordsUpdatedAt) {
+                    throw new Error('Data tidak sampai ke Google Sheets. Pastikan skrip versi terkini sudah di-deploy.');
+                }
+            }
+        }
+
+        function handleSyncError(err, silent, verb) {
+            console.error('Ralat sync Google Sheets:', err);
+            if (err && err.message === 'UNAUTHORIZED') {
+                setSyncStatus('auth');
+                showToast('Kunci rahsia salah atau belum diisi. Buka butang Google Sheets untuk memasukkannya.', 'error');
+                if (silent) openCloudModal();
+                return;
+            }
+            setSyncStatus('error');
+            if (!silent) {
+                showToast(`Gagal ${verb} data. Semak URL, deployment "Anyone" dan versi skrip.`, 'error');
+            } else {
+                showToast('Sync ke Google Sheets gagal. Data selamat di peranti ini dan akan dicuba semula.', 'error');
+            }
+        }
+
+        // ---- UI status sync ----
+        function setSyncStatus(status) {
+            state.sync.status = status;
+            updateSyncUI();
+        }
+
+        function updateSyncUI() {
+            if (!getCloudBase()) state.sync.status = 'off';
+            const labels = {
+                off: 'Google Sheets',
+                syncing: 'Menyegerak...',
+                synced: 'Tersimpan di awan',
+                dirty: 'Menunggu hantar...',
+                error: 'Sync gagal',
+                auth: 'Kunci diperlukan'
+            };
+            els.cloudStatusText.textContent = labels[state.sync.status] || labels.off;
+            els.cloudSyncBtn.dataset.status = state.sync.status;
+            if (els.cloudLastSync) {
+                els.cloudLastSync.textContent = state.sync.lastSync
+                    ? 'Disegerakkan kali terakhir: ' + new Date(state.sync.lastSync).toLocaleString('ms-MY')
+                    : 'Belum disegerakkan.';
+            }
+        }
+        function updateCloudStatusUI() { updateSyncUI(); }
+
+        function openCloudModal() {
+            els.gasUrlInput.value = state.gasUrl || DEFAULT_GAS_URL;
+            els.gasKeyInput.value = state.gasKey || '';
+            updateSyncUI();
+            els.cloudModal.classList.add('active');
+        }
+
+        function syncLeadInputsFromState() {
+            els.leadNameInput.value = state.payrollConfig.leadName || 'Sales Lead';
+            els.leadBasicInput.value = state.payrollConfig.leadBasic ?? 0;
+            els.leadCommPctInput.value = state.payrollConfig.leadCommPct ?? 2;
+            els.leadIncludeCheck.checked = state.payrollConfig.leadIncluded !== false;
+        }
+
+        function switchMainTab(tabName) {
+            state.activeTab = tabName;
+            if (tabName === 'dashboard') {
+                els.tabDashboardBtn.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-amber-500 text-obsidian-950 transition-all flex items-center gap-2 cursor-pointer';
+                els.tabCommissionBtn.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold text-zinc-400 hover:text-white transition-all flex items-center gap-2 cursor-pointer';
+            } else {
+                els.tabCommissionBtn.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-bold bg-amber-500 text-obsidian-950 transition-all flex items-center gap-2 cursor-pointer';
+                els.tabDashboardBtn.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold text-zinc-400 hover:text-white transition-all flex items-center gap-2 cursor-pointer';
+            }
+            renderApp();
+        }
+
+        // ============================================================================
+        // SHEETJS EXCEL / CSV PARSER & CUMULATIVE UPSERT LOGIC
+        // ============================================================================
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processUploadedFile(file);
+            }
+            event.target.value = '';
+        }
+
+        function processUploadedFile(file) {
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    if (state.demoMode) { // buang data sampel sebelum import data sebenar
+                        state.recordsMap.clear();
+                        state.demoMode = false;
+                    }
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: false });
+                    
+                    let addedCount = 0;
+                    let updatedCount = 0;
+                    let parsedTotal = 0;
+
+                    workbook.SheetNames.forEach(sheetName => {
+                        const worksheet = workbook.Sheets[sheetName];
+                        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
+                        
+                        const result = parseMultiBlockRows(rows);
+                        addedCount += result.added;
+                        updatedCount += result.updated;
+                        parsedTotal += result.total;
+                    });
+
+                    if (parsedTotal === 0) {
+                        showToast('Tiada blok jadual "Booking ID" ditemui dalam fail ini.', 'error');
+                        return;
+                    }
+
+                    saveToLocalStorage();
+                    renderApp();
+
+                    showToast(
+                        `Import Selesai: ${addedCount} rekod baharu ditambah, ${updatedCount} rekod sedia ada dikemas kini.`,
+                        'success'
+                    );
+
+                } catch (err) {
+                    console.error('Ralat memproses fail:', err);
+                    showToast('Gagal membaca fail. Pastikan format .xlsx atau .csv adalah sah.', 'error');
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseMultiBlockRows(rows) {
+            let currentHeaderMap = null;
+            let added = 0;
+            let updated = 0;
+            let total = 0;
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
+
+                const cleanedRow = row.map(cell => String(cell ?? '').trim());
+                const firstCell = cleanedRow[0];
+
+                if (firstCell.toLowerCase() === 'booking id') {
+                    currentHeaderMap = {};
+                    cleanedRow.forEach((colName, colIdx) => {
+                        if (colName) {
+                            currentHeaderMap[colName.toLowerCase()] = colIdx;
+                        }
+                    });
+                    continue;
+                }
+
+                if (!currentHeaderMap) continue;
+
+                if (!firstCell || firstCell.toLowerCase().startsWith('total') || firstCell.toLowerCase().startsWith('nama agent')) {
+                    continue;
+                }
+
+                const getVal = (headerName) => {
+                    const idx = currentHeaderMap[headerName.toLowerCase()];
+                    return idx !== undefined && cleanedRow[idx] !== undefined ? cleanedRow[idx] : '';
+                };
+
+                const bookingId = getVal('Booking ID');
+                if (!bookingId) continue;
+
+                const parseMoney = (val) => {
+                    if (typeof val === 'number') return val;
+                    const num = parseFloat(String(val).replace(/[^0-9.-]+/g, ''));
+                    return isNaN(num) ? 0 : num;
+                };
+
+                const rawJobDate = getVal('Job Date');
+                const normalizedDate = normalizeDateString(rawJobDate);
+
+                const record = {
+                    bookingId: bookingId,
+                    jobDate: normalizedDate,
+                    jobTime: getVal('Job Time'),
+                    customer: getVal('Customer') || 'Pelanggan Tanpa Nama',
+                    phone: getVal('Phone'),
+                    address: getVal('Address'),
+                    area: getVal('Area') || '-',
+                    service: getVal('Service') || '-',
+                    serviceDetails: getVal('Service Details'),
+                    technicians: getVal('Technicians'),
+                    createdBy: getVal('Created By'),
+                    reportOwner: getVal('Report Owner') || getVal('Agent') || 'Unassigned',
+                    agent: getVal('Agent'),
+                    crmLeadId: getVal('CRM Lead ID'),
+                    crmAssignmentId: getVal('CRM Assignment ID'),
+                    crmLeadCategory: getVal('CRM Lead Category') || 'Fresh',
+                    freezingCategory: getVal('Freezing Category'),
+                    freezingYear: getVal('Freezing Year'),
+                    status: normalizeStatus(getVal('Status')),
+                    invoiceAmount: parseMoney(getVal('Invoice Amount RM')),
+                    salesValue: parseMoney(getVal('Sales Value RM')),
+                    paymentStatus: getVal('Payment Status'),
+                    paymentMethod: getVal('Payment Method'),
+                    transportCharge: parseMoney(getVal('Transport Charge RM')),
+                    depositAmount: parseMoney(getVal('Deposit Amount RM')),
+                    depositPaidAt: getVal('Deposit Paid At'),
+                    balancePaidAt: getVal('Balance Paid At'),
+                    notes: getVal('Notes'),
+                    lastUpdated: getVal('Last Updated')
+                };
+
+                if (state.recordsMap.has(bookingId)) {
+                    state.recordsMap.set(bookingId, record);
+                    updated++;
+                } else {
+                    state.recordsMap.set(bookingId, record);
+                    added++;
+                }
+                total++;
+            }
+
+            return { added, updated, total };
+        }
+
+        function normalizeDateString(dateStr) {
+            if (!dateStr) return '';
+            const s = String(dateStr).trim();
+
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+            const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+            if (dmyMatch) {
+                const day = dmyMatch[1].padStart(2, '0');
+                const month = dmyMatch[2].padStart(2, '0');
+                const year = dmyMatch[3];
+                return `${year}-${month}-${day}`;
+            }
+
+            if (/^\d{5}$/.test(s)) {
+                const serial = parseInt(s, 10);
+                const utcDays = Math.floor(serial - 25569);
+                const utcValue = utcDays * 86400;
+                const dateInfo = new Date(utcValue * 1000);
+                return dateInfo.toISOString().split('T')[0];
+            }
+
+            const parsed = new Date(s);
+            if (!isNaN(parsed.getTime())) {
+                const y = parsed.getFullYear();
+                const m = String(parsed.getMonth() + 1).padStart(2, '0');
+                const d = String(parsed.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+
+            return s;
+        }
+
+        function normalizeStatus(statusStr) {
+            const s = String(statusStr || '').trim();
+            if (!s) return 'Booked';
+            const lower = s.toLowerCase();
+            if (lower.includes('complete')) return 'Completed';
+            if (lower.includes('lock')) return 'Locked';
+            if (lower.includes('book')) return 'Booked';
+            if (lower.includes('cancel')) return 'Cancelled';
+            return s;
+        }
+
+        // ============================================================================
+        // DYNAMIC WEEK CALCULATION & FILTERING
+        // ============================================================================
+        function generateWeekOptions() {
+            const allRecords = Array.from(state.recordsMap.values());
+            const validDates = allRecords
+                .map(r => r.jobDate)
+                .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+                .sort();
+
+            const currentSelection = state.selectedWeek;
+            els.weekFilter.innerHTML = '<option value="ALL">Semua Minggu</option>';
+
+            if (validDates.length === 0) return [];
+
+            const minDate = new Date(validDates[0] + 'T00:00:00');
+            const maxDate = new Date(validDates[validDates.length - 1] + 'T00:00:00');
+
+            const startOfFirstWeek = new Date(minDate);
+            const dayOfWeek = startOfFirstWeek.getDay();
+            const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            startOfFirstWeek.setDate(startOfFirstWeek.getDate() + diffToMonday);
+
+            const weeks = [];
+            let cursor = new Date(startOfFirstWeek);
+            let weekIndex = 1;
+
+            while (cursor <= maxDate) {
+                const weekStart = new Date(cursor);
+                const weekEnd = new Date(cursor);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+
+                const startStr = formatDateISO(weekStart);
+                const endStr = formatDateISO(weekEnd);
+
+                const hasRecords = validDates.some(d => d >= startStr && d <= endStr);
+                if (hasRecords) {
+                    const label = `Minggu ${weekIndex} (${formatShortDate(weekStart)} - ${formatShortDate(weekEnd)})`;
+                    weeks.push({ id: `${startStr}_${endStr}`, label, startStr, endStr });
+                    
+                    const opt = document.createElement('option');
+                    opt.value = `${startStr}_${endStr}`;
+                    opt.textContent = label;
+                    els.weekFilter.appendChild(opt);
+                    weekIndex++;
+                }
+
+                cursor.setDate(cursor.getDate() + 7);
+            }
+
+            if (Array.from(els.weekFilter.options).some(o => o.value === currentSelection)) {
+                els.weekFilter.value = currentSelection;
+            } else {
+                state.selectedWeek = 'ALL';
+                els.weekFilter.value = 'ALL';
+            }
+
+            return weeks;
+        }
+
+        function applyFilters() {
+            const allRecords = Array.from(state.recordsMap.values());
+
+            state.filteredRecords = allRecords.filter(rec => {
+                if (state.selectedWeek !== 'ALL') {
+                    const [startStr, endStr] = state.selectedWeek.split('_');
+                    if (!rec.jobDate || rec.jobDate < startStr || rec.jobDate > endStr) {
+                        return false;
+                    }
+                }
+
+                if (state.selectedStatus !== 'ALL') {
+                    const st = rec.status.toUpperCase();
+                    if (state.selectedStatus === 'COMPLETED' && st !== 'COMPLETED') return false;
+                    if (state.selectedStatus === 'BOOKED' && st !== 'BOOKED') return false;
+                    if (state.selectedStatus === 'LOCKED' && st !== 'LOCKED') return false;
+                }
+
+                return true;
+            });
+        }
+
+        // ============================================================================
+        // MASTER RENDER PIPELINE
+        // ============================================================================
+        function renderApp() {
+            const totalStored = state.recordsMap.size;
+            els.dataBadge.textContent = `${totalStored.toLocaleString('en-US')} Rekod Aktif`;
+
+            if (totalStored === 0) {
+                els.emptyStateBanner.classList.remove('hidden');
+                els.dashboardContent.classList.add('hidden');
+                els.commissionSection.classList.add('hidden');
+                return;
+            }
+
+            els.emptyStateBanner.classList.add('hidden');
+            generateWeekOptions();
+            applyFilters();
+
+            if (state.activeTab === 'dashboard') {
+                els.dashboardContent.classList.remove('hidden');
+                els.commissionSection.classList.add('hidden');
+                renderKPIs();
+                renderTrendChart();
+                renderDoughnutChart();
+                renderAgentCards();
+            } else {
+                els.dashboardContent.classList.add('hidden');
+                els.commissionSection.classList.remove('hidden');
+                renderCommissionSection();
+            }
+        }
+
+        function updateChartToggleUI() {
+            if (state.trendChartType === 'line') {
+                els.chartTypeLine.className = 'px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500 text-obsidian-950 transition-all cursor-pointer';
+                els.chartTypeBar.className = 'px-3 py-1 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition-all cursor-pointer';
+            } else {
+                els.chartTypeBar.className = 'px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500 text-obsidian-950 transition-all cursor-pointer';
+                els.chartTypeLine.className = 'px-3 py-1 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition-all cursor-pointer';
+            }
+
+            if (state.doughnutMode === 'status') {
+                els.donutModeStatus.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-500 text-obsidian-950 transition-all cursor-pointer';
+                els.donutModeCategory.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold text-zinc-400 hover:text-white transition-all cursor-pointer';
+                els.doughnutSubtitle.textContent = 'Nisbah Status Tempahan (RM)';
+            } else {
+                els.donutModeCategory.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-500 text-obsidian-950 transition-all cursor-pointer';
+                els.donutModeStatus.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold text-zinc-400 hover:text-white transition-all cursor-pointer';
+                els.doughnutSubtitle.textContent = 'Nisbah Kategori Pelanggan (RM)';
+            }
+        }
+
+        function animateValue(el, endVal, isCurrency = false, duration = 650) {
+            const startVal = 0;
+            const startTime = performance.now();
+            function update(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 3);
+                const current = startVal + (endVal - startVal) * ease;
+                el.textContent = isCurrency ? formatCurrency(current) : Math.round(current).toLocaleString('en-US');
+                if (progress < 1) requestAnimationFrame(update);
+                else el.textContent = isCurrency ? formatCurrency(endVal) : Math.round(endVal).toLocaleString('en-US');
+            }
+            requestAnimationFrame(update);
+        }
+
+        function renderKPIs() {
+            const records = state.filteredRecords;
+            const totalJobs = records.length;
+            let totalSales = 0;
+            let completedCount = 0;
+            let bookedLockedCount = 0;
+            let pastClientSales = 0;
+            let pastClientJobs = 0;
+
+            const agentTotals = {};
+
+            records.forEach(r => {
+                const val = r.salesValue || 0;
+                totalSales += val;
+
+                const st = r.status.toUpperCase();
+                if (st === 'COMPLETED') completedCount++;
+                else if (st === 'BOOKED' || st === 'LOCKED') bookedLockedCount++;
+
+                if (String(r.crmLeadCategory).trim().toLowerCase() === 'past client') {
+                    pastClientSales += val;
+                    pastClientJobs++;
+                }
+
+                const owner = r.reportOwner || 'Unassigned';
+                agentTotals[owner] = (agentTotals[owner] || 0) + val;
+            });
+
+            const avgSales = totalJobs > 0 ? totalSales / totalJobs : 0;
+            const pastClientRatio = totalSales > 0 ? ((pastClientSales / totalSales) * 100).toFixed(1) : 0;
+
+            let topAgent = '-';
+            let topAgentVal = 0;
+            Object.entries(agentTotals).forEach(([name, sum]) => {
+                if (sum > topAgentVal) {
+                    topAgentVal = sum;
+                    topAgent = name;
+                }
+            });
+
+            animateValue(els.kpiTotalSales, totalSales, true);
+            els.kpiAvgSales.textContent = `RM ${formatCurrency(avgSales)}`;
+            animateValue(els.kpiTotalJobs, totalJobs, false);
+            els.kpiCompletedCount.textContent = completedCount;
+            els.kpiBookedLockedCount.textContent = bookedLockedCount;
+            animateValue(els.kpiPastClientSales, pastClientSales, true);
+            els.kpiPastClientRatio.innerHTML = `${pastClientRatio}% (<span>${pastClientJobs}</span> jobs)`;
+            els.kpiTopAgentName.textContent = topAgent;
+            els.kpiTopAgentName.title = topAgent;
+            els.kpiTopAgentSales.textContent = `RM ${formatCurrency(topAgentVal)}`;
+        }
+
+        function renderTrendChart() {
+            const ctx = document.getElementById('salesTrendChart').getContext('2d');
+
+            const dateMap = {};
+            state.filteredRecords.forEach(r => {
+                const d = r.jobDate || 'Tiada Tarikh';
+                dateMap[d] = (dateMap[d] || 0) + (r.salesValue || 0);
+            });
+
+            const sortedDates = Object.keys(dateMap).sort();
+            const labels = sortedDates.map(d => {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+                    const dt = new Date(d + 'T00:00:00');
+                    return dt.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short' });
+                }
+                return d;
+            });
+            const values = sortedDates.map(d => dateMap[d]);
+
+            if (state.charts.trend) {
+                state.charts.trend.destroy();
+            }
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(139,140,255, 0.42)');
+            gradient.addColorStop(0.7, 'rgba(124,125,255, 0.08)');
+            gradient.addColorStop(1, 'rgba(7, 7, 9, 0.0)');
+
+            state.charts.trend = new Chart(ctx, {
+                type: state.trendChartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Jualan (RM)',
+                        data: values,
+                        borderColor: '#8B8CFF',
+                        backgroundColor: state.trendChartType === 'line' ? gradient : 'rgba(139,140,255, 0.75)',
+                        borderWidth: state.trendChartType === 'line' ? 2.5 : 1,
+                        borderRadius: state.trendChartType === 'bar' ? 6 : 0,
+                        fill: state.trendChartType === 'line',
+                        tension: 0.35,
+                        pointBackgroundColor: '#070709',
+                        pointBorderColor: '#8B8CFF',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#8B8CFF',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(11, 11, 14, 0.95)',
+                            titleColor: '#8B8CFF',
+                            bodyColor: '#F4F4F5',
+                            borderColor: 'rgba(139,140,255, 0.3)',
+                            borderWidth: 1,
+                            padding: 12,
+                            cornerRadius: 10,
+                            displayColors: false,
+                            callbacks: {
+                                label: (context) => `Jualan: RM ${formatCurrency(context.parsed.y)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
+                            ticks: { color: '#A1A1AA', font: { family: '"Plus Jakarta Sans"', size: 11 } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                            ticks: {
+                                color: '#A1A1AA',
+                                font: { family: '"JetBrains Mono"', size: 11 },
+                                callback: (val) => 'RM ' + val.toLocaleString('en-US')
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderDoughnutChart() {
+            const ctx = document.getElementById('breakdownChart').getContext('2d');
+
+            let labels = [];
+            let dataValues = [];
+            let colors = [];
+
+            if (state.doughnutMode === 'status') {
+                let completed = 0;
+                let bookedLocked = 0;
+                let others = 0;
+
+                state.filteredRecords.forEach(r => {
+                    const st = r.status.toUpperCase();
+                    if (st === 'COMPLETED') completed += r.salesValue;
+                    else if (st === 'BOOKED' || st === 'LOCKED') bookedLocked += r.salesValue;
+                    else others += r.salesValue;
+                });
+
+                labels = ['Completed', 'Booked / Locked'];
+                dataValues = [completed, bookedLocked];
+                colors = ['#10B981', '#8B8CFF'];
+
+                if (others > 0) {
+                    labels.push('Lain-lain');
+                    dataValues.push(others);
+                    colors.push('#52525B');
+                }
+            } else {
+                let fresh = 0;
+                let pastClient = 0;
+
+                state.filteredRecords.forEach(r => {
+                    const cat = String(r.crmLeadCategory).trim().toLowerCase();
+                    if (cat === 'past client') pastClient += r.salesValue;
+                    else fresh += r.salesValue;
+                });
+
+                labels = ['Fresh Lead', 'Past Client'];
+                dataValues = [fresh, pastClient];
+                colors = ['#7C7DFF', '#FEF08A'];
+            }
+
+            if (state.charts.breakdown) {
+                state.charts.breakdown.destroy();
+            }
+
+            state.charts.breakdown = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: dataValues,
+                        backgroundColor: colors,
+                        borderColor: '#0E0E12',
+                        borderWidth: 3,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(11, 11, 14, 0.95)',
+                            titleColor: '#8B8CFF',
+                            bodyColor: '#F4F4F5',
+                            borderColor: 'rgba(139,140,255, 0.3)',
+                            borderWidth: 1,
+                            padding: 10,
+                            cornerRadius: 10,
+                            callbacks: {
+                                label: (context) => {
+                                    const val = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                    return ` RM ${formatCurrency(val)} (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const totalSum = dataValues.reduce((a, b) => a + b, 0);
+            els.doughnutLegend.innerHTML = labels.map((lbl, idx) => {
+                const val = dataValues[idx];
+                const pct = totalSum > 0 ? ((val / totalSum) * 100).toFixed(0) : 0;
+                return `
+                    <div class="flex items-center justify-between bg-obsidian-950/60 px-2.5 py-2 rounded-lg border border-zinc-800/80">
+                        <div class="flex items-center gap-2 truncate">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${colors[idx]}"></span>
+                            <span class="text-zinc-300 truncate">${lbl}</span>
+                        </div>
+                        <span class="font-mono font-bold text-white ml-1">${pct}%</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============================================================================
+        // INTERACTIVE AGENT CARDS (GROUPED BY REPORT OWNER)
+        // ============================================================================
+        function renderAgentCards() {
+            const agentMap = new Map();
+
+            state.filteredRecords.forEach(r => {
+                const owner = r.reportOwner || 'Unassigned';
+                if (!agentMap.has(owner)) {
+                    agentMap.set(owner, {
+                        name: owner,
+                        totalSales: 0,
+                        completedSales: 0,
+                        bookedLockedSales: 0,
+                        jobCount: 0,
+                        records: []
+                    });
+                }
+
+                const entry = agentMap.get(owner);
+                const val = r.salesValue || 0;
+                entry.totalSales += val;
+                entry.jobCount++;
+                entry.records.push(r);
+
+                const st = r.status.toUpperCase();
+                if (st === 'COMPLETED') {
+                    entry.completedSales += val;
+                } else if (st === 'BOOKED' || st === 'LOCKED') {
+                    entry.bookedLockedSales += val;
+                }
+            });
+
+            let agentsList = Array.from(agentMap.values()).sort((a, b) => b.totalSales - a.totalSales);
+
+            agentsList.forEach((ag, index) => {
+                ag.rank = index + 1;
+            });
+
+            if (state.agentSearch) {
+                agentsList = agentsList.filter(ag => ag.name.toLowerCase().includes(state.agentSearch));
+            }
+
+            if (agentsList.length === 0) {
+                els.agentCardsGrid.innerHTML = `
+                    <div class="col-span-full glass-card rounded-2xl p-8 text-center text-zinc-400 text-sm">
+                        Tiada ejen sepadan dengan penapis semasa.
+                    </div>
+                `;
+                return;
+            }
+
+            els.agentCardsGrid.innerHTML = agentsList.map((agent, idx) => {
+                const initials = getInitials(agent.name);
+                const completedPct = agent.totalSales > 0 ? (agent.completedSales / agent.totalSales) * 100 : 0;
+                const bookedPct = agent.totalSales > 0 ? (agent.bookedLockedSales / agent.totalSales) * 100 : 0;
+
+                const isTop1 = agent.rank === 1;
+                const rankBadge = isTop1 
+                    ? `<span class="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-gradient-to-r from-amber-400 to-amber-600 text-obsidian-950 flex items-center gap-1 shadow-[0_0_12px_rgba(124,125,255,0.4)]"><i class="ph-fill ph-crown"></i> #1</span>`
+                    : `<span class="px-2.5 py-0.5 text-[11px] font-mono font-semibold rounded-full bg-zinc-800/90 text-zinc-300 border border-zinc-700">#${agent.rank}</span>`;
+
+                return `
+                    <div onclick="openAgentModal('${escapeQuotes(agent.name)}', ${agent.rank})" 
+                         onmousemove="handleCardMouseMove(event, this)"
+                         class="glass-card agent-card rounded-2xl p-5 flex flex-col justify-between group"
+                         style="animation: fadeSlideUp 0.5s ease forwards; animation-delay: ${Math.min(idx * 0.05, 0.4)}s;">
+                        
+                        <div>
+                            <div class="flex items-start justify-between gap-3 mb-4">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-11 h-11 rounded-xl ${isTop1 ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-obsidian-950' : 'bg-obsidian-900 border border-amber-500/30 text-amber-400'} font-extrabold text-sm flex items-center justify-center shrink-0">
+                                        ${initials}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <h3 class="text-base font-bold text-white truncate group-hover:text-amber-300 transition-colors" title="${escapeHtml(agent.name)}">
+                                            ${escapeHtml(agent.name)}
+                                        </h3>
+                                        <p class="text-xs text-zinc-400 flex items-center gap-1.5 mt-0.5">
+                                            <i class="ph-fill ph-briefcase text-amber-500/80"></i>
+                                            <span><strong class="text-zinc-200">${agent.jobCount}</strong> Tempahan</span>
+                                        </p>
+                                    </div>
+                                </div>
+                                ${rankBadge}
+                            </div>
+
+                            <div class="bg-obsidian-950/70 rounded-xl p-3.5 border border-zinc-800/80 mb-4">
+                                <span class="text-[11px] uppercase tracking-wider text-zinc-400 block mb-0.5">Jumlah Jualan Keseluruhan</span>
+                                <div class="flex items-baseline justify-between">
+                                    <span class="text-xl sm:text-2xl font-extrabold font-mono text-gold-gradient">
+                                        RM ${formatCurrency(agent.totalSales)}
+                                    </span>
+                                    <span class="text-xs text-amber-400/80 group-hover:translate-x-1 transition-transform flex items-center gap-1 font-medium">
+                                        Perincian <i class="ph-bold ph-arrow-right"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2.5">
+                            <div class="w-full h-2 rounded-full bg-zinc-800 overflow-hidden flex">
+                                <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${completedPct}%" title="Completed: RM ${formatCurrency(agent.completedSales)}"></div>
+                                <div class="bg-amber-400 h-full transition-all duration-500" style="width: ${bookedPct}%" title="Booked/Locked: RM ${formatCurrency(agent.bookedLockedSales)}"></div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div class="bg-emerald-950/25 border border-emerald-500/20 rounded-lg px-2.5 py-1.5">
+                                    <span class="text-[10px] text-emerald-400/90 flex items-center gap-1 font-semibold">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Completed
+                                    </span>
+                                    <span class="font-mono font-bold text-emerald-300 text-xs block mt-0.5">
+                                        RM ${formatCurrency(agent.completedSales)}
+                                    </span>
+                                </div>
+                                <div class="bg-amber-950/25 border border-amber-500/20 rounded-lg px-2.5 py-1.5">
+                                    <span class="text-[10px] text-amber-400/90 flex items-center gap-1 font-semibold">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Booked / Locked
+                                    </span>
+                                    <span class="font-mono font-bold text-amber-300 text-xs block mt-0.5">
+                                        RM ${formatCurrency(agent.bookedLockedSales)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleCardMouseMove(e, cardEl) {
+            const rect = cardEl.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            cardEl.style.setProperty('--mouse-x', `${x}px`);
+            cardEl.style.setProperty('--mouse-y', `${y}px`);
+        }
+
+        // ============================================================================
+        // AGENT TRANSACTIONS MODAL
+        // ============================================================================
+        function openAgentModal(agentName, rank) {
+            const records = state.filteredRecords
+                .filter(r => (r.reportOwner || 'Unassigned') === agentName)
+                .sort((a, b) => (a.jobDate || '').localeCompare(b.jobDate || ''));
+
+            state.activeModalAgent = agentName;
+            state.activeModalRecords = records;
+
+            let total = 0;
+            let completed = 0;
+            let pending = 0;
+
+            records.forEach(r => {
+                const val = r.salesValue || 0;
+                total += val;
+                const st = r.status.toUpperCase();
+                if (st === 'COMPLETED') completed += val;
+                else if (st === 'BOOKED' || st === 'LOCKED') pending += val;
+            });
+
+            els.modalAgentAvatar.textContent = getInitials(agentName);
+            els.modalAgentName.textContent = agentName;
+            els.modalAgentRank.textContent = `#${rank} Ranking Semasa (${records.length} Jobs)`;
+            els.modalTotalSales.textContent = `RM ${formatCurrency(total)}`;
+            els.modalCompletedSales.textContent = `RM ${formatCurrency(completed)}`;
+            els.modalPendingSales.textContent = `RM ${formatCurrency(pending)}`;
+            els.modalSearchInput.value = '';
+
+            renderModalTable('');
+            els.agentModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeAgentModal() {
+            els.agentModal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function renderModalTable(searchQuery) {
+            let list = state.activeModalRecords;
+
+            if (searchQuery) {
+                list = list.filter(r => 
+                    r.bookingId.toLowerCase().includes(searchQuery) ||
+                    r.customer.toLowerCase().includes(searchQuery) ||
+                    r.area.toLowerCase().includes(searchQuery) ||
+                    r.service.toLowerCase().includes(searchQuery)
+                );
+            }
+
+            els.modalRowCount.textContent = `Memaparkan ${list.length} daripada ${state.activeModalRecords.length} transaksi`;
+
+            if (list.length === 0) {
+                els.modalTransactionsBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="py-10 text-center text-zinc-400">
+                            Tiada rekod transaksi ditemui.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            els.modalTransactionsBody.innerHTML = list.map(r => {
+                const statusBadge = getStatusBadgeHTML(r.status);
+                const isPastClient = String(r.crmLeadCategory).trim().toLowerCase() === 'past client';
+                const catBadge = isPastClient
+                    ? `<span class="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">Past Client</span>`
+                    : `<span class="px-2 py-0.5 text-[11px] font-medium rounded-md bg-zinc-800/80 text-zinc-400">${escapeHtml(r.crmLeadCategory || 'Fresh')}</span>`;
+
+                return `
+                    <tr class="hover:bg-amber-500/[0.04] transition-colors">
+                        <td class="py-3.5 px-4 sm:px-5 font-mono font-semibold text-amber-300 whitespace-nowrap">
+                            ${escapeHtml(r.bookingId)}
+                        </td>
+                        <td class="py-3.5 px-4 font-mono text-zinc-300 whitespace-nowrap">
+                            ${escapeHtml(r.jobDate || '-')}
+                        </td>
+                        <td class="py-3.5 px-4 font-medium text-white">
+                            <div>${escapeHtml(r.customer)}</div>
+                            ${r.phone ? `<div class="text-[11px] text-zinc-500 font-mono">${escapeHtml(r.phone)}</div>` : ''}
+                        </td>
+                        <td class="py-3.5 px-4 text-zinc-300">
+                            ${escapeHtml(r.area)}
+                        </td>
+                        <td class="py-3.5 px-4 text-zinc-300 max-w-[200px] truncate" title="${escapeHtml(r.service)}">
+                            ${escapeHtml(r.service)}
+                        </td>
+                        <td class="py-3.5 px-4 whitespace-nowrap">
+                            ${catBadge}
+                        </td>
+                        <td class="py-3.5 px-4 whitespace-nowrap">
+                            ${statusBadge}
+                        </td>
+                        <td class="py-3.5 px-4 sm:px-5 text-right font-mono font-bold text-white whitespace-nowrap">
+                            RM ${formatCurrency(r.salesValue)}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getStatusBadgeHTML(status) {
+            const st = String(status).toUpperCase();
+            if (st === 'COMPLETED') {
+                return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Completed
+                </span>`;
+            }
+            if (st === 'BOOKED') {
+                return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Booked
+                </span>`;
+            }
+            if (st === 'LOCKED') {
+                return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                    <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span> Locked
+                </span>`;
+            }
+            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zinc-800 text-zinc-300 border border-zinc-700">
+                ${escapeHtml(status)}
+            </span>`;
+        }
+
+        // ============================================================================
+        // DEMO SAMPLE DATA
+        // ============================================================================
+        function loadDemoData() {
+            const mockRows = [
+                ['Nama Agent', 'Total Revenue', 'Total Jobs'],
+                ['Aiman Zulkifli', '15400', '12'],
+                ['Nurul Izzah', '12800', '10'],
+                [],
+                ['Booking ID', 'Job Date', 'Job Time', 'Customer', 'Phone', 'Address', 'Area', 'Service', 'Service Details', 'Technicians', 'Created By', 'Report Owner', 'Agent', 'CRM Lead ID', 'CRM Assignment ID', 'CRM Lead Category', 'Freezing Category', 'Freezing Year', 'Status', 'Invoice Amount RM', 'Sales Value RM', 'Payment Status', 'Payment Method', 'Transport Charge RM', 'Deposit Amount RM', 'Deposit Paid At', 'Balance Paid At', 'Notes', 'Last Updated'],
+                ['BK-2026-1001', '2026-11-02', '10:00 AM', 'Ahmad Razali', '012-3456789', 'No 12 Jalan Setia', 'Shah Alam', 'Aircond Chemical Overhaul', '3 Units 1.5HP', 'Tech Ali', 'Aiman Zulkifli', 'Aiman Zulkifli', 'Aiman Zulkifli', 'LD-01', 'AS-01', 'Past Client', 'Normal', '2026', 'Completed', '650', '650', 'Full Paid', 'Online Transfer', '0', '100', '2026-11-01', '2026-11-02', '', '2026-11-02'],
+                ['BK-2026-1002', '2026-11-04', '02:00 PM', 'Siti Sarah', '019-8877665', 'Bangsar South', 'Kuala Lumpur', 'Full House Deep Cleaning', 'Double Storey', 'Team B', 'Aiman Zulkifli', 'Aiman Zulkifli', 'Aiman Zulkifli', 'LD-02', 'AS-02', 'Fresh', 'Normal', '2026', 'Completed', '890', '890', 'Full Paid', 'FPX', '0', '200', '2026-11-03', '2026-11-04', '', '2026-11-04'],
+                ['BK-2026-1003', '2026-11-10', '09:30 AM', 'Dato Ken Wong', '016-2233445', 'Damansara Heights', 'Damansara', 'Cassette Aircond Service', '5 Units Commercial', 'Tech Rizal', 'Aiman Zulkifli', 'Aiman Zulkifli', 'Aiman Zulkifli', 'LD-03', 'AS-03', 'Past Client', 'Normal', '2026', 'Booked', '1450', '1450', 'Deposit Paid', 'Card', '0', '300', '2026-11-06', '', '', '2026-11-06'],
+                ['BK-2026-1004', '2026-11-14', '11:00 AM', 'Farah Nabila', '013-5544332', 'Subang Jaya SS15', 'Subang Jaya', 'Water Heater & Piping', '2 Bathrooms', 'Tech Danial', 'Aiman Zulkifli', 'Aiman Zulkifli', 'Aiman Zulkifli', 'LD-04', 'AS-04', 'Fresh', 'Normal', '2026', 'Locked', '520', '520', 'Deposit Paid', 'QR Pay', '0', '100', '2026-11-08', '', '', '2026-11-08'],
+                [],
+                ['Booking ID', 'Job Date', 'Job Time', 'Customer', 'Phone', 'Address', 'Area', 'Service', 'Service Details', 'Technicians', 'Created By', 'Report Owner', 'Agent', 'CRM Lead ID', 'CRM Assignment ID', 'CRM Lead Category', 'Freezing Category', 'Freezing Year', 'Status', 'Invoice Amount RM', 'Sales Value RM', 'Payment Status', 'Payment Method', 'Transport Charge RM', 'Deposit Amount RM', 'Deposit Paid At', 'Balance Paid At', 'Notes', 'Last Updated'],
+                ['BK-2026-2001', '2026-11-03', '10:30 AM', 'Puan Zainab', '017-9988112', 'Taman Melawati', 'Ampang', 'Sofa & Mattress Sanitizing', 'L-Shape + 2 King', 'Team A', 'Nurul Izzah', 'Nurul Izzah', 'Nurul Izzah', 'LD-05', 'AS-05', 'Past Client', 'Normal', '2026', 'Completed', '580', '580', 'Full Paid', 'Online Transfer', '0', '100', '2026-11-01', '2026-11-03', '', '2026-11-03'],
+                ['BK-2026-2002', '2026-11-09', '03:00 PM', 'Kelvin Tan', '012-7766554', 'Mont Kiara', 'Kuala Lumpur', 'Aircond Chemical Overhaul', '4 Units Inverter', 'Tech Ali', 'Nurul Izzah', 'Nurul Izzah', 'Nurul Izzah', 'LD-06', 'AS-06', 'Fresh', 'Normal', '2026', 'Completed', '920', '920', 'Full Paid', 'FPX', '0', '200', '2026-11-05', '2026-11-09', '', '2026-11-09'],
+                ['BK-2026-2003', '2026-11-15', '10:00 AM', 'Dr. Hafiz', '019-3322110', 'Putrajaya Presint 11', 'Putrajaya', 'Post-Renovation Cleaning', 'Semi-D House', 'Team C', 'Nurul Izzah', 'Nurul Izzah', 'Nurul Izzah', 'LD-07', 'AS-07', 'Past Client', 'Normal', '2026', 'Booked', '1280', '1280', 'Deposit Paid', 'Online Transfer', '0', '400', '2026-11-10', '', '', '2026-11-10'],
+                [],
+                ['Booking ID', 'Job Date', 'Job Time', 'Customer', 'Phone', 'Address', 'Area', 'Service', 'Service Details', 'Technicians', 'Created By', 'Report Owner', 'Agent', 'CRM Lead ID', 'CRM Assignment ID', 'CRM Lead Category', 'Freezing Category', 'Freezing Year', 'Status', 'Invoice Amount RM', 'Sales Value RM', 'Payment Status', 'Payment Method', 'Transport Charge RM', 'Deposit Amount RM', 'Deposit Paid At', 'Balance Paid At', 'Notes', 'Last Updated'],
+                ['BK-2026-3001', '2026-11-05', '09:00 AM', 'Michelle Lim', '011-2345678', 'Puchong Jaya', 'Puchong', 'Aircond Gas Refill & Service', '2 Units', 'Tech Rizal', 'Daniel Hakim', 'Daniel Hakim', 'Daniel Hakim', 'LD-08', 'AS-08', 'Fresh', 'Normal', '2026', 'Completed', '380', '380', 'Full Paid', 'QR Pay', '0', '50', '2026-11-04', '2026-11-05', '', '2026-11-05'],
+                ['BK-2026-3002', '2026-11-12', '01:30 PM', 'Encik Roslan', '018-7654321', 'Cyberjaya', 'Cyberjaya', 'Electrical Wiring & DB Box', 'Full Inspection', 'Tech Danial', 'Daniel Hakim', 'Daniel Hakim', 'Daniel Hakim', 'LD-09', 'AS-09', 'Past Client', 'Normal', '2026', 'Locked', '760', '760', 'Deposit Paid', 'FPX', '0', '200', '2026-11-09', '', '', '2026-11-09']
+            ];
+
+            state.demoMode = true; // sampel sahaja: tidak disimpan & tidak dihantar ke awan
+            const res = parseMultiBlockRows(mockRows);
+            renderApp();
+            showToast(`Data sampel dimuatkan (${res.added} rekod). Mod demo: tidak disimpan ke awan.`, 'info');
+        }
+
+        // ============================================================================
+        // UTILITY HELPERS
+        // ============================================================================
+        function formatCurrency(num) {
+            return Number(num || 0).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function formatDateISO(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function formatShortDate(dateObj) {
+            return dateObj.toLocaleDateString('ms-MY', { day: '2-digit', month: 'short' });
+        }
+
+        function getInitials(name) {
+            const parts = String(name || 'AG').trim().split(/\s+/);
+            if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function escapeQuotes(str) {
+            return String(str ?? '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        // ============================================================================
+        // COMMISSION & PAYROLL CLAIM ENGINE + PRO PDF GENERATOR
+        // ============================================================================
+        function calculatePayrollData() {
+            let totalTeamSales = 0;
+            const agentSalesMap = new Map();
+
+            state.filteredRecords.forEach(r => {
+                const val = r.salesValue || 0;
+                totalTeamSales += val;
+                const owner = r.reportOwner || 'Unassigned';
+                if (!agentSalesMap.has(owner)) {
+                    agentSalesMap.set(owner, { name: owner, sales: 0, jobs: 0 });
+                }
+                const entry = agentSalesMap.get(owner);
+                entry.sales += val;
+                entry.jobs += 1;
+            });
+
+            const leadBasic = parseFloat(state.payrollConfig.leadBasic) || 0;
+            const leadCommPct = parseFloat(state.payrollConfig.leadCommPct) || 0;
+            const leadCommAmount = totalTeamSales * (leadCommPct / 100);
+            const leadTotalPayout = leadBasic + leadCommAmount;
+
+            const agentsList = Array.from(agentSalesMap.values())
+                .sort((a, b) => b.sales - a.sales)
+                .map(ag => {
+                    if (!state.payrollConfig.agents[ag.name]) {
+                        state.payrollConfig.agents[ag.name] = {
+                            target: 5000,
+                            basic: 2000,
+                            commPct: 10,
+                            included: true
+                        };
+                    }
+                    const cfg = state.payrollConfig.agents[ag.name];
+                    const target = parseFloat(cfg.target) || 0;
+                    const configuredBasic = parseFloat(cfg.basic) || 0;
+                    const commPct = parseFloat(cfg.commPct) || 0;
+
+                    const hitTarget = ag.sales >= target;
+                    const eligibleBasic = hitTarget ? configuredBasic : 0;
+                    const excessSales = ag.sales > target ? (ag.sales - target) : 0;
+                    const commAmount = excessSales * (commPct / 100);
+                    const totalPayout = eligibleBasic + commAmount;
+
+                    return {
+                        name: ag.name,
+                        jobs: ag.jobs,
+                        sales: ag.sales,
+                        target,
+                        configuredBasic,
+                        commPct,
+                        included: cfg.included !== false,
+                        hitTarget,
+                        eligibleBasic,
+                        excessSales,
+                        commAmount,
+                        totalPayout
+                    };
+                });
+
+            return {
+                totalTeamSales,
+                lead: {
+                    name: state.payrollConfig.leadName || 'Sales Lead',
+                    included: state.payrollConfig.leadIncluded !== false,
+                    basic: leadBasic,
+                    commPct: leadCommPct,
+                    commAmount: leadCommAmount,
+                    totalPayout: leadTotalPayout
+                },
+                agents: agentsList
+            };
+        }
+
+        function renderCommissionSection() {
+            const payroll = calculatePayrollData();
+
+            els.leadBaseSalesDisplay.textContent = `RM ${formatCurrency(payroll.totalTeamSales)}`;
+            els.leadCommAmountDisplay.textContent = `RM ${formatCurrency(payroll.lead.commAmount)}`;
+            els.leadTotalPayoutDisplay.textContent = `RM ${formatCurrency(payroll.lead.totalPayout)}`;
+
+            if (payroll.agents.length === 0) {
+                els.commissionTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="10" class="py-8 text-center text-zinc-400">Tiada rekod ejen untuk penapis semasa.</td>
+                    </tr>
+                `;
+            } else {
+                els.commissionTableBody.innerHTML = payroll.agents.map(ag => {
+                    const safeName = escapeQuotes(ag.name);
+                    const statusBadge = ag.hitTarget
+                        ? `<span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Capai Target</span>`
+                        : `<span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-zinc-800 text-zinc-400">Belum Capai</span>`;
+
+                    return `
+                        <tr class="hover:bg-amber-500/[0.03] transition-colors ${ag.included ? '' : 'opacity-50'}">
+                            <td class="py-3.5 px-4 text-center">
+                                <input type="checkbox" class="gold-checkbox" ${ag.included ? 'checked' : ''} onchange="updateAgentPayrollField('${safeName}', 'included', this.checked)">
+                            </td>
+                            <td class="py-3.5 px-4 font-bold text-white whitespace-nowrap">
+                                <div>${escapeHtml(ag.name)}</div>
+                                <div class="text-[11px] font-normal text-zinc-400 mt-0.5">${ag.jobs} jobs ${statusBadge}</div>
+                            </td>
+                            <td class="py-3.5 px-4 text-right font-mono font-bold text-white whitespace-nowrap">
+                                ${formatCurrency(ag.sales)}
+                            </td>
+                            <td class="py-3.5 px-3 text-right">
+                                <input type="number" value="${ag.target}" min="0" step="100"
+                                    onchange="updateAgentPayrollField('${safeName}', 'target', parseFloat(this.value)||0)"
+                                    class="w-28 bg-obsidian-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-2.5 py-1.5 text-right font-mono text-xs text-zinc-200 focus:outline-none">
+                            </td>
+                            <td class="py-3.5 px-3 text-right">
+                                <input type="number" value="${ag.configuredBasic}" min="0" step="50"
+                                    onchange="updateAgentPayrollField('${safeName}', 'basic', parseFloat(this.value)||0)"
+                                    class="w-28 bg-obsidian-950 border border-zinc-700 focus:border-amber-400 rounded-lg px-2.5 py-1.5 text-right font-mono text-xs text-zinc-200 focus:outline-none">
+                            </td>
+                            <td class="py-3.5 px-3 text-right">
+                                <input type="number" value="${ag.commPct}" min="0" max="100" step="0.5"
+                                    onchange="updateAgentPayrollField('${safeName}', 'commPct', parseFloat(this.value)||0)"
+                                    class="w-20 bg-obsidian-950 border border-amber-500/40 focus:border-amber-400 rounded-lg px-2.5 py-1.5 text-right font-mono text-xs font-bold text-amber-300 focus:outline-none">
+                            </td>
+                            <td class="py-3.5 px-4 text-right font-mono text-zinc-300 whitespace-nowrap">
+                                ${formatCurrency(ag.excessSales)}
+                            </td>
+                            <td class="py-3.5 px-4 text-right font-mono ${ag.hitTarget ? 'text-emerald-400 font-semibold' : 'text-zinc-500'} whitespace-nowrap">
+                                ${formatCurrency(ag.eligibleBasic)}
+                            </td>
+                            <td class="py-3.5 px-4 text-right font-mono text-amber-300 font-semibold whitespace-nowrap">
+                                ${formatCurrency(ag.commAmount)}
+                            </td>
+                            <td class="py-3.5 px-5 text-right font-mono font-extrabold text-gold-gradient whitespace-nowrap">
+                                ${formatCurrency(ag.totalPayout)}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            const allChecked = payroll.agents.length > 0 && payroll.agents.every(a => a.included);
+            els.selectAllAgentsCheck.checked = allChecked;
+
+            let selectedCount = 0;
+            let totalBasicSum = 0;
+            let totalCommSum = 0;
+            let grandTotalSum = 0;
+
+            if (payroll.lead.included) {
+                selectedCount++;
+                totalBasicSum += payroll.lead.basic;
+                totalCommSum += payroll.lead.commAmount;
+                grandTotalSum += payroll.lead.totalPayout;
+            }
+
+            payroll.agents.forEach(ag => {
+                if (ag.included) {
+                    selectedCount++;
+                    totalBasicSum += ag.eligibleBasic;
+                    totalCommSum += ag.commAmount;
+                    grandTotalSum += ag.totalPayout;
+                }
+            });
+
+            els.selectedGrandTotalDisplay.textContent = `RM ${formatCurrency(grandTotalSum)}`;
+            els.selectedCountDisplay.textContent = `${selectedCount} penerima dipilih untuk penjanaan slip PDF`;
+            els.selectedTotalBasicDisplay.textContent = `RM ${formatCurrency(totalBasicSum)}`;
+            els.selectedTotalCommDisplay.textContent = `RM ${formatCurrency(totalCommSum)}`;
+        }
+
+        function updateAgentPayrollField(agentName, field, value) {
+            if (!state.payrollConfig.agents[agentName]) {
+                state.payrollConfig.agents[agentName] = { target: 5000, basic: 2000, commPct: 10, included: true };
+            }
+            state.payrollConfig.agents[agentName][field] = value;
+            savePayrollConfig();
+            renderCommissionSection();
+        }
+
+        function generatePayrollPDF() {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                showToast('Pustaka PDF sedang dimuatkan. Sila cuba sebentar lagi.', 'error');
+                return;
+            }
+
+            const payroll = calculatePayrollData();
+            const selectedAgents = payroll.agents.filter(a => a.included);
+            const includeLead = payroll.lead.included;
+
+            if (!includeLead && selectedAgents.length === 0) {
+                showToast('Sila tandakan (tick) sekurang-kurangnya seorang penerima sebelum menjana PDF.', 'error');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+            const periodLabel = els.pdfPeriodTitle.value.trim() || els.weekFilter.options[els.weekFilter.selectedIndex]?.text || 'Semua Tempoh';
+            const statusLabel = els.statusFilter.options[els.statusFilter.selectedIndex]?.text || 'Semua Status';
+            const generatedDate = new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'long', year: 'numeric' });
+
+            doc.setFillColor(12, 12, 16);
+            doc.rect(0, 0, 297, 36, 'F');
+            doc.setFillColor(245, 158, 11);
+            doc.rect(0, 35, 297, 1.5, 'F');
+
+            doc.setTextColor(251, 191, 36);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
+            doc.text('COMMISSION & PAYROLL CLAIM STATEMENT', 14, 16);
+
+            doc.setTextColor(212, 212, 216);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.text(`Tempoh Laporan: ${periodLabel}   |   Penapis Status: ${statusLabel}`, 14, 24);
+            doc.text(`Tarikh Dijana: ${generatedDate}   |   Jumlah Jualan Pasukan: RM ${formatCurrency(payroll.totalTeamSales)}`, 14, 30);
+
+            const tableBody = [];
+            let sumSales = 0;
+            let sumBasic = 0;
+            let sumComm = 0;
+            let sumTotal = 0;
+
+            if (includeLead) {
+                tableBody.push([
+                    `${payroll.lead.name} (Sales Lead)`,
+                    'Override Pool',
+                    `RM ${formatCurrency(payroll.totalTeamSales)}`,
+                    '-',
+                    `RM ${formatCurrency(payroll.totalTeamSales)}`,
+                    `${payroll.lead.commPct}%`,
+                    `RM ${formatCurrency(payroll.lead.basic)}`,
+                    `RM ${formatCurrency(payroll.lead.commAmount)}`,
+                    `RM ${formatCurrency(payroll.lead.totalPayout)}`
+                ]);
+                sumBasic += payroll.lead.basic;
+                sumComm += payroll.lead.commAmount;
+                sumTotal += payroll.lead.totalPayout;
+            }
+
+            selectedAgents.forEach(ag => {
+                tableBody.push([
+                    ag.name,
+                    `${ag.jobs} Jobs`,
+                    `RM ${formatCurrency(ag.sales)}`,
+                    `RM ${formatCurrency(ag.target)}`,
+                    `RM ${formatCurrency(ag.excessSales)}`,
+                    `${ag.commPct}%`,
+                    `RM ${formatCurrency(ag.eligibleBasic)}`,
+                    `RM ${formatCurrency(ag.commAmount)}`,
+                    `RM ${formatCurrency(ag.totalPayout)}`
+                ]);
+                sumSales += ag.sales;
+                sumBasic += ag.eligibleBasic;
+                sumComm += ag.commAmount;
+                sumTotal += ag.totalPayout;
+            });
+
+            doc.autoTable({
+                startY: 43,
+                head: [[
+                    'Nama Penerima',
+                    'Peranan / Jobs',
+                    'Jualan (RM)',
+                    'Target (RM)',
+                    'Baki Lebihan',
+                    'Kadar %',
+                    'Gaji Basic',
+                    'Komisen',
+                    'Jumlah Payout'
+                ]],
+                body: tableBody,
+                foot: [[
+                    'JUMLAH KESELURUHAN PAYOUT',
+                    `${(includeLead ? 1 : 0) + selectedAgents.length} Penerima`,
+                    `RM ${formatCurrency(sumSales)}`,
+                    '-',
+                    '-',
+                    '-',
+                    `RM ${formatCurrency(sumBasic)}`,
+                    `RM ${formatCurrency(sumComm)}`,
+                    `RM ${formatCurrency(sumTotal)}`
+                ]],
+                theme: 'grid',
+                styles: {
+                    font: 'helvetica',
+                    fontSize: 9,
+                    cellPadding: 3.5,
+                    textColor: [30, 30, 35],
+                    lineColor: [220, 220, 225]
+                },
+                headStyles: {
+                    fillColor: [18, 18, 24],
+                    textColor: [251, 191, 36],
+                    fontStyle: 'bold',
+                    halign: 'left'
+                },
+                footStyles: {
+                    fillColor: [254, 243, 199],
+                    textColor: [12, 12, 16],
+                    fontStyle: 'bold',
+                    fontSize: 9.5
+                },
+                columnStyles: {
+                    2: { halign: 'right' },
+                    3: { halign: 'right' },
+                    4: { halign: 'right' },
+                    5: { halign: 'center' },
+                    6: { halign: 'right' },
+                    7: { halign: 'right' },
+                    8: { halign: 'right', fontStyle: 'bold' }
+                }
+            });
+
+            const finalY = doc.lastAutoTable.finalY + 18;
+            if (finalY < 185) {
+                doc.setDrawColor(160, 160, 170);
+                doc.line(14, finalY + 14, 85, finalY + 14);
+                doc.line(115, finalY + 14, 186, finalY + 14);
+                doc.line(212, finalY + 14, 283, finalY + 14);
+
+                doc.setFontSize(8.5);
+                doc.setTextColor(90, 90, 100);
+                doc.text('Disediakan Oleh (Admin / Lead)', 14, finalY + 19);
+                doc.text('Disemak Oleh (Akaun / Kewangan)', 115, finalY + 19);
+                doc.text('Diluluskan Oleh (Pengurusan)', 212, finalY + 19);
+            }
+
+            const safeFileName = `Payroll-Commission-${periodLabel.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
+            doc.save(safeFileName);
+            showToast(`Penyata PDF (${safeFileName}) berjaya dimuat turun!`, 'success');
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const borderClass = type === 'success' ? 'border-emerald-500/40' : type === 'error' ? 'border-red-500/40' : 'border-amber-500/40';
+            const iconHtml = type === 'success' 
+                ? '<i class="ph-fill ph-check-circle text-emerald-400 text-xl shrink-0"></i>' 
+                : type === 'error' 
+                ? '<i class="ph-fill ph-warning-circle text-red-400 text-xl shrink-0"></i>' 
+                : '<i class="ph-fill ph-info text-amber-400 text-xl shrink-0"></i>';
+
+            toast.className = `pointer-events-auto glass-card rounded-xl p-4 border ${borderClass} shadow-2xl flex items-center gap-3 text-xs sm:text-sm text-zinc-100 transform transition-all duration-300 translate-y-4 opacity-0`;
+            toast.innerHTML = `${iconHtml}<span class="leading-snug">${escapeHtml(message)}</span>`;
+
+            els.toastContainer.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4200);
+        }
+    
+        // ============================================================================
+        // MOTION: parallax background, 3D tilt on agent cards, zoom-in/out agent modal
+        // ============================================================================
+        (function initMotion() {
+            const scene = document.getElementById('bgScene');
+            window.addEventListener('pointermove', (e) => {
+                scene.style.setProperty('--px', (e.clientX / innerWidth - 0.5).toFixed(3));
+                scene.style.setProperty('--py', (e.clientY / innerHeight - 0.5).toFixed(3));
+            }, { passive: true });
+
+            const grid = document.getElementById('agentCardsGrid');
+            let lastCard = null;
+            grid.addEventListener('pointermove', (e) => {
+                const c = e.target.closest('.agent-card');
+                if (!c || e.pointerType === 'touch') return;
+                const r = c.getBoundingClientRect();
+                c.style.setProperty('--ry', (((e.clientX - r.left) / r.width - 0.5) * 10).toFixed(2) + 'deg');
+                c.style.setProperty('--rx', (-((e.clientY - r.top) / r.height - 0.5) * 10).toFixed(2) + 'deg');
+            });
+            grid.addEventListener('pointerout', (e) => {
+                const c = e.target.closest('.agent-card');
+                if (c && !c.contains(e.relatedTarget)) { c.style.setProperty('--rx', '0deg'); c.style.setProperty('--ry', '0deg'); }
+            });
+            grid.addEventListener('click', (e) => {
+                const c = e.target.closest('.agent-card');
+                if (!c) return;
+                lastCard = c;
+                c.classList.remove('zoom'); void c.offsetWidth; c.classList.add('zoom');
+            }, true);
+
+            // Modal zooms out of the clicked card and back into it on close
+            const baseOpen = openAgentModal;
+            openAgentModal = function (...args) {
+                baseOpen.apply(this, args);
+                const panel = els.agentModal.querySelector('.modal-panel');
+                if (lastCard && panel) {
+                    const r = lastCard.getBoundingClientRect();
+                    const left = (innerWidth - panel.offsetWidth) / 2, top = (innerHeight - panel.offsetHeight) / 2;
+                    panel.style.transformOrigin = (r.left + r.width / 2 - left) + 'px ' + (r.top + r.height / 2 - top) + 'px';
+                }
+            };
+        })();
+    </script>
+</body>
+</html>
