@@ -167,6 +167,15 @@
             animation: fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
+        /* Cloud sync status indicator */
+        #cloudSyncBtn[data-status="synced"]  { border-color: rgba(52, 211, 153, 0.65); }
+        #cloudSyncBtn[data-status="syncing"] { border-color: rgba(251, 191, 36, 0.7); color: #FCD34D; }
+        #cloudSyncBtn[data-status="dirty"]   { border-color: rgba(251, 191, 36, 0.5); color: #FCD34D; }
+        #cloudSyncBtn[data-status="error"],
+        #cloudSyncBtn[data-status="auth"]    { border-color: rgba(248, 113, 113, 0.7); color: #FCA5A5; }
+        #cloudSyncBtn[data-status="syncing"] i { animation: syncPulse 1s ease-in-out infinite; }
+        @keyframes syncPulse { 50% { opacity: 0.3; } }
+
         /* Custom Select Styling */
         select {
             appearance: none;
@@ -275,7 +284,7 @@
                     </div>
 
                     <!-- Google Sheets Cloud Sync Button -->
-                    <button id="cloudSyncBtn" class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-950/50 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer" title="Tetapan & Sync Google Sheets">
+                    <button id="cloudSyncBtn" class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-950/50 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer" title="Tetapan & status sync Google Sheets" data-status="off">
                         <i class="ph-bold ph-google-logo text-base"></i>
                         <span id="cloudStatusText">Google Sheets</span>
                     </button>
@@ -290,7 +299,7 @@
                     </button>
 
                     <!-- Reset Button -->
-                    <button id="resetBtn" class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-zinc-900/90 hover:bg-red-950/50 text-zinc-300 hover:text-red-400 border border-zinc-800 hover:border-red-500/40 transition-all flex items-center gap-1.5 cursor-pointer" title="Padam semua data dalam penyemak imbas">
+                    <button id="resetBtn" class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-zinc-900/90 hover:bg-red-950/50 text-zinc-300 hover:text-red-400 border border-zinc-800 hover:border-red-500/40 transition-all flex items-center gap-1.5 cursor-pointer" title="Padam semua data (termasuk di Google Sheets)">
                         <i class="ph-bold ph-trash text-base"></i>
                         <span class="hidden sm:inline">Reset Data</span>
                     </button>
@@ -661,16 +670,21 @@
                             Simpan URL
                         </button>
                     </div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-emerald-400 mt-3 mb-1.5">Kunci Rahsia (pilihan, sama seperti SECRET dalam skrip)</label>
+                    <input type="password" id="gasKeyInput" autocomplete="off" placeholder="Kosongkan jika skrip tiada SECRET" class="w-full bg-obsidian-950 border border-zinc-700 focus:border-emerald-400 rounded-xl px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none">
+                    <p class="text-[11px] text-zinc-500 mt-1.5">Kunci disimpan pada peranti ini sahaja (tidak ada dalam kod GitHub). Masukkan sekali pada setiap peranti baharu.</p>
+                    <p id="cloudLastSync" class="text-[11px] text-zinc-400 mt-2">Belum disegerakkan.</p>
+
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button id="pushToCloudBtn" class="p-3.5 rounded-xl bg-obsidian-900 hover:bg-obsidian-800 border border-amber-500/30 text-amber-300 font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all">
                         <i class="ph-bold ph-cloud-arrow-up text-lg"></i>
-                        <span>Hantar Data ke Google Sheets (Push)</span>
+                        <span>Hantar Paksa (peranti ini &rarr; awan)</span>
                     </button>
                     <button id="pullFromCloudBtn" class="p-3.5 rounded-xl bg-obsidian-900 hover:bg-obsidian-800 border border-emerald-500/30 text-emerald-300 font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all">
                         <i class="ph-bold ph-cloud-arrow-down text-lg"></i>
-                        <span>Tarik Data dari Google Sheets (Pull)</span>
+                        <span>Tarik Paksa (awan &rarr; peranti ini)</span>
                     </button>
                 </div>
 
@@ -683,25 +697,80 @@
                         </button>
                     </div>
                     <ol class="list-decimal list-inside text-xs text-zinc-400 space-y-1">
-                        <li>Buka <strong>Google Sheets</strong> baharu di Google Drive anda.</li>
-                        <li>Klik menu <span class="text-zinc-200">Extensions &gt; Apps Script</span>.</li>
-                        <li>Padam kod asal, tampal kod skrip di bawah, dan klik <strong>Deploy &gt; New deployment</strong>.</li>
-                        <li>Pilih jenis <strong>Web app</strong>, tetapkan <em>Who has access</em> kepada <strong>Anyone</strong>, kemudian salin URL Web App ke kotak di atas.</li>
+                        <li>Buka <strong>Google Sheets</strong> baharu, klik <span class="text-zinc-200">Extensions &gt; Apps Script</span>.</li>
+                        <li>Padam kod asal, tampal kod di bawah. Pilihan: isi <span class="text-zinc-200 font-mono">SECRET</span> dengan kata laluan anda.</li>
+                        <li><strong>Deploy &gt; New deployment</strong> &gt; <strong>Web app</strong>, <em>Execute as: Me</em>, <em>Who has access: Anyone</em>.</li>
+                        <li>Jika sudah ada deployment lama: <strong>Deploy &gt; Manage deployments</strong> &gt; ikon pensel &gt; <em>Version: New version</em> &gt; Deploy (URL kekal sama).</li>
+                        <li>Data akan disegerakkan secara automatik selepas upload fail atau ubah tetapan gaji.</li>
                     </ol>
-                    <pre id="gasScriptCode" class="bg-black/80 p-3 rounded-lg border border-zinc-800 text-[11px] font-mono text-emerald-300 overflow-x-auto select-all">function doGet(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var data = sheet.getRange(1, 1).getValue();
-  return ContentService.createTextOutput(data || '{"records":[],"payroll":{}}')
+                    <pre id="gasScriptCode" class="bg-black/80 p-3 rounded-lg border border-zinc-800 text-[11px] font-mono text-emerald-300 overflow-x-auto select-all">/**
+ * Sales &amp; Booking Dashboard - Backend v2 (Google Apps Script)
+ * - Data disimpan dalam helaian "DB" (dipecah kepada bahagian kecil, tiada had 50,000 aksara)
+ * - Kunci rahsia pilihan: isi SECRET di bawah supaya hanya anda boleh baca/tulis data
+ */
+var SECRET = '';          // contoh: 'kata-laluan-saya'  (kosong = tanpa kunci)
+var SHEET_NAME = 'DB';
+var CHUNK = 40000;
+
+function getSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  return ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+}
+
+function json_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(e) {
+  if (SECRET &amp;&amp; (!e || !e.parameter || e.parameter.key !== SECRET)) {
+    return json_({ error: 'unauthorized' });
+  }
+  var sh = getSheet_();
+  var last = sh.getLastRow();
+  var text = '';
+  if (last &gt;= 1) {
+    text = sh.getRange(1, 1, last, 1).getValues()
+      .map(function (r) { return r[0]; }).join('');
+  }
+  if (!text) {
+    // Sokongan data lama (versi 1: disimpan di sel A1 helaian pertama)
+    var old = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0].getRange(1, 1).getValue();
+    if (typeof old === 'string' &amp;&amp; old.charAt(0) === '{') text = old;
+  }
+  return ContentService.createTextOutput(text || '{"records":[],"payroll":{}}')
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  sheet.getRange(1, 1).setValue(e.postData.contents);
-  sheet.getRange(2, 1).setValue("Last Sync: " + new Date().toISOString());
-  return ContentService.createTextOutput(JSON.stringify({status: "ok"}))
-    .setMimeType(ContentService.MimeType.JSON);
-}</pre>
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var data = JSON.parse(e.postData.contents);
+    if (SECRET &amp;&amp; data.key !== SECRET) return json_({ error: 'unauthorized' });
+    delete data.key;
+
+    var text = JSON.stringify(data);
+    var rows = [];
+    for (var i = 0; i &lt; text.length; i += CHUNK) {
+      rows.push([text.substring(i, i + CHUNK)]);
+    }
+
+    var sh = getSheet_();
+    sh.clear();
+    var range = sh.getRange(1, 1, rows.length, 1);
+    range.setNumberFormat('@');            // paksa teks supaya tidak ditukar jadi nombor/formula
+    range.setValues(rows);
+    sh.getRange(1, 3).setValue('Last Sync: ' + new Date().toISOString());
+
+    return json_({ status: 'ok', records: (data.records || []).length });
+  } catch (err) {
+    return json_({ error: String(err) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+</pre>
                 </div>
             </div>
         </div>
@@ -784,7 +853,7 @@ function doPost(e) {
             </div>
             <h3 class="text-lg font-bold text-white mb-2">Padam Semua Data Laporan?</h3>
             <p class="text-sm text-zinc-400 mb-6">
-                Tindakan ini akan memadam semua rekod jualan yang disimpan dalam <span class="text-zinc-200 font-mono">localStorage</span> pelayar anda. Anda perlu memuat naik semula fail laporan selepas ini.
+                Tindakan ini akan memadam semua rekod jualan di pelayar ini <strong class="text-zinc-200">dan di Google Sheets</strong>, jadi peranti lain juga akan kosong. Tetapan gaji &amp; komisen tidak dipadam. Anda perlu memuat naik semula fail laporan selepas ini.
             </p>
             <div class="flex items-center justify-end gap-3">
                 <button id="cancelResetBtn" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 transition-colors cursor-pointer">
@@ -809,12 +878,22 @@ function doPost(e) {
          * 4. Chart.js Data Visualizations (Trend Line/Bar & Status/Category Doughnut)
          * 5. Interactive Agent Cards & Transaction Inspection Modal
          * 6. Commission & Payroll Claim Calculator + Pro PDF Generator
-         * 7. Google Sheets Apps Script Cloud Sync
+         * 7. Google Sheets Apps Script Cloud Sync (auto push/pull, gabung data, status sync)
          */
 
+        // ---- Storage keys (localStorage) ----
         const STORAGE_KEY = 'sales_booking_intelligence_records_v1';
         const PAYROLL_STORAGE_KEY = 'sales_booking_payroll_config_v1';
         const GAS_URL_STORAGE_KEY = 'sales_booking_gas_url_v1';
+        const GAS_KEY_STORAGE_KEY = 'sales_booking_gas_key_v1';
+        const SYNC_META_KEY = 'sales_booking_sync_meta_v2';
+
+        // ---- Google Apps Script Web App URL (tetap, supaya semua peranti terus tersambung) ----
+        const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyZd3ap0cJsLq10TqxBqm_SJ2UX4F5nUkTdiZVS61Zt6rDX0qXnvtRQMPTvdj5m3S9t_A/exec';
+
+        // ---- Sync tuning ----
+        const SYNC_DEBOUNCE_MS = 1500;      // tunggu selepas perubahan terakhir sebelum hantar
+        const FOCUS_PULL_MIN_GAP_MS = 20000; // jarak minimum antara tarik data automatik bila tab dibuka semula
 
         // Global Application State
         let state = {
@@ -829,6 +908,17 @@ function doPost(e) {
             activeModalAgent: null,
             activeModalRecords: [],
             gasUrl: '',
+            gasKey: '',
+            demoMode: false, // data sampel: tidak disimpan & tidak disegerakkan
+            sync: {
+                recordsAt: 0,   // masa terakhir rekod diubah (ms)
+                payrollAt: 0,   // masa terakhir tetapan gaji diubah (ms)
+                dirty: false,   // ada perubahan belum dihantar ke awan
+                version: 0,     // pembilang perubahan (untuk kesan perubahan semasa penghantaran)
+                lastSync: 0,
+                status: 'off',  // off | syncing | synced | dirty | error | auth
+                lastPullAt: 0
+            },
             payrollConfig: {
                 leadName: 'Sales Lead',
                 leadBasic: 0,
@@ -861,6 +951,8 @@ function doPost(e) {
             cloudModal: document.getElementById('cloudModal'),
             closeCloudModalBtn: document.getElementById('closeCloudModalBtn'),
             gasUrlInput: document.getElementById('gasUrlInput'),
+            gasKeyInput: document.getElementById('gasKeyInput'),
+            cloudLastSync: document.getElementById('cloudLastSync'),
             saveGasUrlBtn: document.getElementById('saveGasUrlBtn'),
             pushToCloudBtn: document.getElementById('pushToCloudBtn'),
             pullFromCloudBtn: document.getElementById('pullFromCloudBtn'),
@@ -929,10 +1021,34 @@ function doPost(e) {
         // ============================================================================
         // INITIALIZATION
         // ============================================================================
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             loadFromLocalStorage();
             setupEventListeners();
             renderApp();
+            updateSyncUI();
+
+            // Peranti baharu / buka semula: tarik data terkini dari Google Sheets secara automatik
+            if (getCloudBase()) {
+                els.emptyStateBanner.classList.add('opacity-40', 'pointer-events-none');
+                await pullFromCloud({ silent: true });
+                els.emptyStateBanner.classList.remove('opacity-40', 'pointer-events-none');
+            }
+
+            // Bila tab/aplikasi dibuka semula, ambil perubahan dari peranti lain
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState !== 'visible') return;
+                if (state.sync.dirty || state.sync.status === 'syncing') return;
+                if (Date.now() - state.sync.lastPullAt < FOCUS_PULL_MIN_GAP_MS) return;
+                pullFromCloud({ silent: true });
+            });
+
+            // Amaran jika masih ada data belum sempat dihantar
+            window.addEventListener('beforeunload', (e) => {
+                if (!state.demoMode && (state.sync.dirty || state.sync.status === 'syncing')) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
         });
 
         function setupEventListeners() {
@@ -1007,8 +1123,11 @@ function doPost(e) {
                 els.confirmModal.classList.remove('active');
             });
             els.confirmResetBtn.addEventListener('click', () => {
+                const wasDemo = state.demoMode;
                 state.recordsMap.clear();
+                state.demoMode = false;
                 localStorage.removeItem(STORAGE_KEY);
+                if (!wasDemo) markChanged('records'); // hantar keadaan kosong ke awan juga
                 state.selectedWeek = 'ALL';
                 state.selectedStatus = 'ALL';
                 els.weekFilter.value = 'ALL';
@@ -1066,8 +1185,7 @@ function doPost(e) {
 
             // Google Sheets Cloud Modal Listeners
             els.cloudSyncBtn.addEventListener('click', () => {
-                els.gasUrlInput.value = state.gasUrl || '';
-                els.cloudModal.classList.add('active');
+                openCloudModal();
             });
             els.closeCloudModalBtn.addEventListener('click', () => {
                 els.cloudModal.classList.remove('active');
@@ -1075,11 +1193,14 @@ function doPost(e) {
             els.cloudModal.addEventListener('click', (e) => {
                 if (e.target === els.cloudModal) els.cloudModal.classList.remove('active');
             });
-            els.saveGasUrlBtn.addEventListener('click', () => {
+            els.saveGasUrlBtn.addEventListener('click', async () => {
                 state.gasUrl = els.gasUrlInput.value.trim();
+                state.gasKey = els.gasKeyInput.value.trim();
                 localStorage.setItem(GAS_URL_STORAGE_KEY, state.gasUrl);
-                updateCloudStatusUI();
-                showToast('URL Google Apps Script disimpan.', 'success');
+                localStorage.setItem(GAS_KEY_STORAGE_KEY, state.gasKey);
+                updateSyncUI();
+                showToast('Tetapan Google Sheets disimpan. Menyemak sambungan...', 'success');
+                await pullFromCloud({ silent: false });
             });
             els.copyGasCodeBtn.addEventListener('click', () => {
                 const textarea = document.createElement('textarea');
@@ -1090,8 +1211,8 @@ function doPost(e) {
                 document.body.removeChild(textarea);
                 showToast('Kod Google Apps Script berjaya disalin!', 'success');
             });
-            els.pushToCloudBtn.addEventListener('click', pushDataToGoogleSheets);
-            els.pullFromCloudBtn.addEventListener('click', pullDataFromGoogleSheets);
+            els.pushToCloudBtn.addEventListener('click', () => pushToCloud({ silent: false }));
+            els.pullFromCloudBtn.addEventListener('click', () => pullFromCloud({ silent: false, force: true }));
 
             // Demo Data Loader
             els.loadDemoBtn.addEventListener('click', loadDemoData);
@@ -1114,8 +1235,14 @@ function doPost(e) {
         }
 
         // ============================================================================
-        // LOCAL STORAGE PERSISTENCE
+        // DATA PERSISTENCE & CLOUD SYNC
+        // ----------------------------------------------------------------------------
+        // Aliran: ubah data -> simpan di pelayar -> hantar automatik ke Google Sheets.
+        // Peranti lain: tarik automatik semasa dibuka (dan bila tab aktif semula).
         // ============================================================================
+        let syncTimer = null;
+        let pushInFlight = false;
+
         function loadFromLocalStorage() {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY);
@@ -1127,33 +1254,296 @@ function doPost(e) {
                 }
                 const rawPayroll = localStorage.getItem(PAYROLL_STORAGE_KEY);
                 if (rawPayroll) {
-                    const parsedPayroll = JSON.parse(rawPayroll);
-                    state.payrollConfig = { ...state.payrollConfig, ...parsedPayroll };
+                    state.payrollConfig = { ...state.payrollConfig, ...JSON.parse(rawPayroll) };
                 }
-                state.gasUrl = localStorage.getItem(GAS_URL_STORAGE_KEY) || '';
-                updateCloudStatusUI();
-                syncLeadInputsFromState();
+                const meta = JSON.parse(localStorage.getItem(SYNC_META_KEY) || '{}');
+                state.sync.recordsAt = meta.recordsAt || 0;
+                state.sync.payrollAt = meta.payrollAt || 0;
+                state.sync.dirty = !!meta.dirty;
+                state.sync.lastSync = meta.lastSync || 0;
+                // Data lama (sebelum ada sistem sync) dianggap belum dihantar supaya tidak hilang
+                if (!localStorage.getItem(SYNC_META_KEY) && state.recordsMap.size > 0) {
+                    state.sync.dirty = true;
+                    state.sync.recordsAt = Date.now();
+                }
             } catch (err) {
                 console.error('Gagal membaca localStorage:', err);
             }
+            state.gasUrl = localStorage.getItem(GAS_URL_STORAGE_KEY) || DEFAULT_GAS_URL;
+            state.gasKey = localStorage.getItem(GAS_KEY_STORAGE_KEY) || '';
+            syncLeadInputsFromState();
         }
 
-        function saveToLocalStorage() {
+        function saveSyncMeta() {
             try {
-                const arr = Array.from(state.recordsMap.values());
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-            } catch (err) {
-                console.error('Gagal menyimpan ke localStorage:', err);
-                showToast('Amaran: Ruang simpanan pelayar penuh.', 'error');
-            }
+                const { recordsAt, payrollAt, dirty, lastSync } = state.sync;
+                localStorage.setItem(SYNC_META_KEY, JSON.stringify({ recordsAt, payrollAt, dirty, lastSync }));
+            } catch (err) { console.error('Gagal menyimpan meta sync:', err); }
         }
 
-        function savePayrollConfig() {
+        // Tulis ke pelayar sahaja (tanpa tanda "perubahan baharu")
+        function writeRecordsLocal() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(state.recordsMap.values())));
+            } catch (err) { console.error('Gagal menyimpan ke localStorage:', err); }
+        }
+        function writePayrollLocal() {
             try {
                 localStorage.setItem(PAYROLL_STORAGE_KEY, JSON.stringify(state.payrollConfig));
-            } catch (err) {
-                console.error('Gagal menyimpan tetapan gaji:', err);
+            } catch (err) { console.error('Gagal menyimpan tetapan gaji:', err); }
+        }
+
+        // Dipanggil selepas upload / reset. Simpan + jadualkan hantar ke awan.
+        function saveToLocalStorage() {
+            if (state.demoMode) return;
+            writeRecordsLocal();
+            markChanged('records');
+        }
+        // Dipanggil setiap kali tetapan gaji/komisen berubah.
+        function savePayrollConfig() {
+            writePayrollLocal();
+            markChanged('payroll');
+        }
+
+        function markChanged(kind) {
+            if (state.demoMode) return;
+            const now = Date.now();
+            if (kind === 'records') state.sync.recordsAt = Math.max(now, state.sync.recordsAt + 1);
+            if (kind === 'payroll') state.sync.payrollAt = Math.max(now, state.sync.payrollAt + 1);
+            state.sync.dirty = true;
+            state.sync.version++;
+            saveSyncMeta();
+            setSyncStatus('dirty');
+            scheduleSync();
+        }
+
+        function scheduleSync() {
+            if (!getCloudBase()) return;
+            clearTimeout(syncTimer);
+            syncTimer = setTimeout(() => pushToCloud({ silent: true }), SYNC_DEBOUNCE_MS);
+        }
+
+        function getCloudBase() {
+            return state.gasUrl || DEFAULT_GAS_URL || '';
+        }
+
+        function buildCloudUrl(withCacheBust) {
+            const url = new URL(getCloudBase());
+            if (state.gasKey) url.searchParams.set('key', state.gasKey);
+            if (withCacheBust) url.searchParams.set('_', Date.now());
+            return url.toString();
+        }
+
+        async function fetchCloud() {
+            const res = await fetch(buildCloudUrl(true), { cache: 'no-store' });
+            const data = await res.json();
+            if (data && data.error === 'unauthorized') throw new Error('UNAUTHORIZED');
+            if (data && data.error) throw new Error(data.error);
+            return data || {};
+        }
+
+        // ---- PULL: tarik & gabung data awan ----
+        async function pullFromCloud({ silent = false, force = false } = {}) {
+            if (!getCloudBase()) {
+                if (!silent) showToast('Sila masukkan URL Google Apps Script terlebih dahulu.', 'error');
+                return;
             }
+            if (state.demoMode && !force) return;
+            const prevStatus = state.sync.status;
+            setSyncStatus('syncing');
+            try {
+                const cloud = await fetchCloud();
+                const cloudRecords = Array.isArray(cloud.records) ? cloud.records : [];
+                const cloudRecAt = cloud.recordsUpdatedAt || 0;
+                const cloudPayAt = cloud.payrollUpdatedAt || 0;
+                const cloudPayroll = cloud.payroll && typeof cloud.payroll === 'object' ? cloud.payroll : null;
+                let needPush = false;
+
+                // --- Rekod jualan ---
+                if (force) {
+                    state.demoMode = false;
+                    state.recordsMap = new Map(cloudRecords.map(r => [r.bookingId, r]));
+                    state.sync.recordsAt = cloudRecAt;
+                    writeRecordsLocal();
+                } else if (state.sync.dirty) {
+                    // Ada perubahan tempatan belum dihantar: gabung (rekod tempatan menang jika ID sama)
+                    const merged = new Map(cloudRecords.map(r => [r.bookingId, r]));
+                    state.recordsMap.forEach((r, id) => merged.set(id, r));
+                    state.recordsMap = merged;
+                    writeRecordsLocal();
+                    needPush = true;
+                } else if (cloudRecords.length > 0 || cloudRecAt > state.sync.recordsAt) {
+                    // Awan lebih terkini (atau sengaja dikosongkan dari peranti lain)
+                    state.demoMode = false;
+                    state.recordsMap = new Map(cloudRecords.map(r => [r.bookingId, r]));
+                    state.sync.recordsAt = cloudRecAt;
+                    writeRecordsLocal();
+                } else if (state.recordsMap.size > 0 && !state.demoMode) {
+                    // Awan kosong tetapi peranti ini ada data: naikkan ke awan
+                    state.sync.recordsAt = state.sync.recordsAt || Date.now();
+                    needPush = true;
+                }
+
+                // --- Tetapan gaji & komisen ---
+                const cloudHasPayroll = cloudPayroll && Object.keys(cloudPayroll).length > 0;
+                if (cloudHasPayroll && (force || cloudPayAt > state.sync.payrollAt || (state.sync.payrollAt === 0 && !state.sync.dirty))) {
+                    state.payrollConfig = {
+                        leadName: 'Sales Lead', leadBasic: 0, leadCommPct: 2, leadIncluded: true,
+                        ...cloudPayroll,
+                        agents: { ...(cloudPayroll.agents || {}) }
+                    };
+                    state.sync.payrollAt = cloudPayAt;
+                    writePayrollLocal();
+                    syncLeadInputsFromState();
+                } else if (state.sync.payrollAt > cloudPayAt) {
+                    needPush = true;
+                }
+
+                state.sync.lastPullAt = Date.now();
+                saveSyncMeta();
+                renderApp();
+
+                if (needPush && !force) {
+                    state.sync.dirty = true;
+                    await pushToCloud({ silent: true });
+                } else {
+                    state.sync.dirty = false;
+                    state.sync.lastSync = Date.now();
+                    saveSyncMeta();
+                    setSyncStatus('synced');
+                }
+
+                if (!silent) {
+                    showToast(`Berjaya menarik data dari Google Sheets (${state.recordsMap.size} rekod).`, 'success');
+                } else if (state.recordsMap.size > 0 && prevStatus !== 'synced') {
+                    showToast(`Data awan disegerakkan (${state.recordsMap.size} rekod).`, 'success');
+                }
+            } catch (err) {
+                handleSyncError(err, silent, 'menarik');
+            }
+        }
+
+        // ---- PUSH: hantar data peranti ini ke awan ----
+        async function pushToCloud({ silent = false } = {}) {
+            if (!getCloudBase()) {
+                if (!silent) showToast('Sila masukkan URL Google Apps Script terlebih dahulu.', 'error');
+                return;
+            }
+            if (state.demoMode) {
+                if (!silent) showToast('Data sampel tidak dihantar ke awan. Upload fail sebenar dahulu.', 'info');
+                return;
+            }
+            if (pushInFlight) {
+                scheduleSync(); // sedang menghantar; cuba semula selepas ini
+                return;
+            }
+            pushInFlight = true;
+            clearTimeout(syncTimer);
+            const versionAtStart = state.sync.version;
+            setSyncStatus('syncing');
+            try {
+                if (!silent) showToast('Menghantar data ke Google Sheets...', 'info');
+                const payload = {
+                    version: 2,
+                    records: Array.from(state.recordsMap.values()),
+                    recordsUpdatedAt: state.sync.recordsAt || Date.now(),
+                    payroll: state.payrollConfig,
+                    payrollUpdatedAt: state.sync.payrollAt || 0,
+                    key: state.gasKey || undefined
+                };
+                await postToCloud(payload);
+
+                state.sync.lastSync = Date.now();
+                // Jika data berubah semasa menghantar, kekalkan status "belum dihantar"
+                if (state.sync.version === versionAtStart) {
+                    state.sync.dirty = false;
+                    saveSyncMeta();
+                    setSyncStatus('synced');
+                } else {
+                    saveSyncMeta();
+                    setSyncStatus('dirty');
+                    scheduleSync();
+                }
+                if (!silent) showToast(`Berjaya dihantar ke Google Sheets (${payload.records.length} rekod).`, 'success');
+            } catch (err) {
+                handleSyncError(err, silent, 'menghantar');
+            } finally {
+                pushInFlight = false;
+            }
+        }
+
+        async function postToCloud(payload) {
+            const body = JSON.stringify(payload);
+            try {
+                // text/plain = "simple request" (tiada preflight CORS) yang diterima Apps Script
+                const res = await fetch(getCloudBase(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body
+                });
+                const out = await res.json();
+                if (out && out.error === 'unauthorized') throw new Error('UNAUTHORIZED');
+                if (!out || out.status !== 'ok') throw new Error((out && out.error) || 'Respons tidak sah dari skrip.');
+            } catch (err) {
+                if (err.message === 'UNAUTHORIZED' || !(err instanceof TypeError)) throw err;
+                // Pelayar menyekat bacaan respons: hantar tanpa respons, kemudian sahkan dengan GET
+                await fetch(getCloudBase(), { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
+                await new Promise(r => setTimeout(r, 1500));
+                const check = await fetchCloud();
+                const okCount = Array.isArray(check.records) && check.records.length === payload.records.length;
+                if (!okCount || (check.recordsUpdatedAt || 0) !== payload.recordsUpdatedAt) {
+                    throw new Error('Data tidak sampai ke Google Sheets. Pastikan skrip versi terkini sudah di-deploy.');
+                }
+            }
+        }
+
+        function handleSyncError(err, silent, verb) {
+            console.error('Ralat sync Google Sheets:', err);
+            if (err && err.message === 'UNAUTHORIZED') {
+                setSyncStatus('auth');
+                showToast('Kunci rahsia salah atau belum diisi. Buka butang Google Sheets untuk memasukkannya.', 'error');
+                if (silent) openCloudModal();
+                return;
+            }
+            setSyncStatus('error');
+            if (!silent) {
+                showToast(`Gagal ${verb} data. Semak URL, deployment "Anyone" dan versi skrip.`, 'error');
+            } else {
+                showToast('Sync ke Google Sheets gagal. Data selamat di peranti ini dan akan dicuba semula.', 'error');
+            }
+        }
+
+        // ---- UI status sync ----
+        function setSyncStatus(status) {
+            state.sync.status = status;
+            updateSyncUI();
+        }
+
+        function updateSyncUI() {
+            if (!getCloudBase()) state.sync.status = 'off';
+            const labels = {
+                off: 'Google Sheets',
+                syncing: 'Menyegerak...',
+                synced: 'Tersimpan di awan',
+                dirty: 'Menunggu hantar...',
+                error: 'Sync gagal',
+                auth: 'Kunci diperlukan'
+            };
+            els.cloudStatusText.textContent = labels[state.sync.status] || labels.off;
+            els.cloudSyncBtn.dataset.status = state.sync.status;
+            if (els.cloudLastSync) {
+                els.cloudLastSync.textContent = state.sync.lastSync
+                    ? 'Disegerakkan kali terakhir: ' + new Date(state.sync.lastSync).toLocaleString('ms-MY')
+                    : 'Belum disegerakkan.';
+            }
+        }
+        function updateCloudStatusUI() { updateSyncUI(); }
+
+        function openCloudModal() {
+            els.gasUrlInput.value = state.gasUrl || DEFAULT_GAS_URL;
+            els.gasKeyInput.value = state.gasKey || '';
+            updateSyncUI();
+            els.cloudModal.classList.add('active');
         }
 
         function syncLeadInputsFromState() {
@@ -1161,16 +1551,6 @@ function doPost(e) {
             els.leadBasicInput.value = state.payrollConfig.leadBasic ?? 0;
             els.leadCommPctInput.value = state.payrollConfig.leadCommPct ?? 2;
             els.leadIncludeCheck.checked = state.payrollConfig.leadIncluded !== false;
-        }
-
-        function updateCloudStatusUI() {
-            if (state.gasUrl) {
-                els.cloudStatusText.textContent = 'Sheets Connected';
-                els.cloudSyncBtn.classList.add('border-emerald-400/60', 'bg-emerald-950/80');
-            } else {
-                els.cloudStatusText.textContent = 'Google Sheets';
-                els.cloudSyncBtn.classList.remove('border-emerald-400/60', 'bg-emerald-950/80');
-            }
         }
 
         function switchMainTab(tabName) {
@@ -1193,7 +1573,7 @@ function doPost(e) {
             if (file) {
                 processUploadedFile(file);
             }
-            event.target.value = ''; // Reset input so same file can be uploaded again if needed
+            event.target.value = '';
         }
 
         function processUploadedFile(file) {
@@ -1201,6 +1581,10 @@ function doPost(e) {
 
             reader.onload = function(e) {
                 try {
+                    if (state.demoMode) { // buang data sampel sebelum import data sebenar
+                        state.recordsMap.clear();
+                        state.demoMode = false;
+                    }
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array', cellDates: false });
                     
@@ -1208,10 +1592,8 @@ function doPost(e) {
                     let updatedCount = 0;
                     let parsedTotal = 0;
 
-                    // Process all sheets in the workbook (usually Sheet1)
                     workbook.SheetNames.forEach(sheetName => {
                         const worksheet = workbook.Sheets[sheetName];
-                        // Convert sheet to 2D array of rows (raw: false preserves formatted strings like dates)
                         const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
                         
                         const result = parseMultiBlockRows(rows);
@@ -1242,12 +1624,6 @@ function doPost(e) {
             reader.readAsArrayBuffer(file);
         }
 
-        /**
-         * Parses 2D array rows:
-         * - Ignores top summary table ("Nama Agent, Total Revenue...")
-         * - Detects every header row starting with "Booking ID"
-         * - Maps columns dynamically and performs Cumulative Upsert by Booking ID
-         */
         function parseMultiBlockRows(rows) {
             let currentHeaderMap = null;
             let added = 0;
@@ -1258,11 +1634,9 @@ function doPost(e) {
                 const row = rows[i];
                 if (!row || row.length === 0) continue;
 
-                // Clean cell values
                 const cleanedRow = row.map(cell => String(cell ?? '').trim());
                 const firstCell = cleanedRow[0];
 
-                // 1. Detect Header Row starting with "Booking ID"
                 if (firstCell.toLowerCase() === 'booking id') {
                     currentHeaderMap = {};
                     cleanedRow.forEach((colName, colIdx) => {
@@ -1273,17 +1647,12 @@ function doPost(e) {
                     continue;
                 }
 
-                // 2. Ignore top summary section or rows before any "Booking ID" header is encountered
-                if (!currentHeaderMap) {
-                    continue;
-                }
+                if (!currentHeaderMap) continue;
 
-                // 3. Skip empty rows or repeated section titles / totals
                 if (!firstCell || firstCell.toLowerCase().startsWith('total') || firstCell.toLowerCase().startsWith('nama agent')) {
                     continue;
                 }
 
-                // Helper to safely extract column value by header name
                 const getVal = (headerName) => {
                     const idx = currentHeaderMap[headerName.toLowerCase()];
                     return idx !== undefined && cleanedRow[idx] !== undefined ? cleanedRow[idx] : '';
@@ -1292,7 +1661,6 @@ function doPost(e) {
                 const bookingId = getVal('Booking ID');
                 if (!bookingId) continue;
 
-                // Parse numeric values safely (strip commas, RM, etc.)
                 const parseMoney = (val) => {
                     if (typeof val === 'number') return val;
                     const num = parseFloat(String(val).replace(/[^0-9.-]+/g, ''));
@@ -1334,8 +1702,6 @@ function doPost(e) {
                     lastUpdated: getVal('Last Updated')
                 };
 
-                // Fallback: If Sales Value RM is 0 but Invoice Amount RM has value, keep Sales Value RM as primary
-                // Cumulative Upsert Logic
                 if (state.recordsMap.has(bookingId)) {
                     state.recordsMap.set(bookingId, record);
                     updated++;
@@ -1349,17 +1715,12 @@ function doPost(e) {
             return { added, updated, total };
         }
 
-        /**
-         * Normalizes dates into YYYY-MM-DD format for accurate sorting and week grouping
-         */
         function normalizeDateString(dateStr) {
             if (!dateStr) return '';
             const s = String(dateStr).trim();
 
-            // Already YYYY-MM-DD
             if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-            // DD/MM/YYYY or DD-MM-YYYY
             const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
             if (dmyMatch) {
                 const day = dmyMatch[1].padStart(2, '0');
@@ -1368,7 +1729,6 @@ function doPost(e) {
                 return `${year}-${month}-${day}`;
             }
 
-            // Excel Serial Number (if raw number slipped through)
             if (/^\d{5}$/.test(s)) {
                 const serial = parseInt(s, 10);
                 const utcDays = Math.floor(serial - 25569);
@@ -1377,7 +1737,6 @@ function doPost(e) {
                 return dateInfo.toISOString().split('T')[0];
             }
 
-            // Fallback JS Date parse
             const parsed = new Date(s);
             if (!isNaN(parsed.getTime())) {
                 const y = parsed.getFullYear();
@@ -1415,13 +1774,11 @@ function doPost(e) {
 
             if (validDates.length === 0) return [];
 
-            // Find min and max dates
             const minDate = new Date(validDates[0] + 'T00:00:00');
             const maxDate = new Date(validDates[validDates.length - 1] + 'T00:00:00');
 
-            // Align start to Monday of the earliest week
             const startOfFirstWeek = new Date(minDate);
-            const dayOfWeek = startOfFirstWeek.getDay(); // 0 (Sun) - 6 (Sat)
+            const dayOfWeek = startOfFirstWeek.getDay();
             const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
             startOfFirstWeek.setDate(startOfFirstWeek.getDate() + diffToMonday);
 
@@ -1437,7 +1794,6 @@ function doPost(e) {
                 const startStr = formatDateISO(weekStart);
                 const endStr = formatDateISO(weekEnd);
 
-                // Check if any record falls in this week
                 const hasRecords = validDates.some(d => d >= startStr && d <= endStr);
                 if (hasRecords) {
                     const label = `Minggu ${weekIndex} (${formatShortDate(weekStart)} - ${formatShortDate(weekEnd)})`;
@@ -1453,7 +1809,6 @@ function doPost(e) {
                 cursor.setDate(cursor.getDate() + 7);
             }
 
-            // Restore selection if still valid
             if (Array.from(els.weekFilter.options).some(o => o.value === currentSelection)) {
                 els.weekFilter.value = currentSelection;
             } else {
@@ -1468,7 +1823,6 @@ function doPost(e) {
             const allRecords = Array.from(state.recordsMap.values());
 
             state.filteredRecords = allRecords.filter(rec => {
-                // 1. Week Filter
                 if (state.selectedWeek !== 'ALL') {
                     const [startStr, endStr] = state.selectedWeek.split('_');
                     if (!rec.jobDate || rec.jobDate < startStr || rec.jobDate > endStr) {
@@ -1476,7 +1830,6 @@ function doPost(e) {
                     }
                 }
 
-                // 2. Status Filter
                 if (state.selectedStatus !== 'ALL') {
                     const st = rec.status.toUpperCase();
                     if (state.selectedStatus === 'COMPLETED' && st !== 'COMPLETED') return false;
@@ -1610,7 +1963,6 @@ function doPost(e) {
         function renderTrendChart() {
             const ctx = document.getElementById('salesTrendChart').getContext('2d');
 
-            // Group sales by Job Date
             const dateMap = {};
             state.filteredRecords.forEach(r => {
                 const d = r.jobDate || 'Tiada Tarikh';
@@ -1631,7 +1983,6 @@ function doPost(e) {
                 state.charts.trend.destroy();
             }
 
-            // Amber Gold Gradient Fill
             const gradient = ctx.createLinearGradient(0, 0, 0, 300);
             gradient.addColorStop(0, 'rgba(251, 191, 36, 0.42)');
             gradient.addColorStop(0.7, 'rgba(245, 158, 11, 0.08)');
@@ -1786,7 +2137,6 @@ function doPost(e) {
                 }
             });
 
-            // Custom Legend HTML
             const totalSum = dataValues.reduce((a, b) => a + b, 0);
             els.doughnutLegend.innerHTML = labels.map((lbl, idx) => {
                 const val = dataValues[idx];
@@ -1807,7 +2157,6 @@ function doPost(e) {
         // INTERACTIVE AGENT CARDS (GROUPED BY REPORT OWNER)
         // ============================================================================
         function renderAgentCards() {
-            // Group filtered records by Report Owner
             const agentMap = new Map();
 
             state.filteredRecords.forEach(r => {
@@ -1837,15 +2186,12 @@ function doPost(e) {
                 }
             });
 
-            // Sort agents by Total Sales descending
             let agentsList = Array.from(agentMap.values()).sort((a, b) => b.totalSales - a.totalSales);
 
-            // Assign rankings before search filtering
             agentsList.forEach((ag, index) => {
                 ag.rank = index + 1;
             });
 
-            // Filter by agent search input
             if (state.agentSearch) {
                 agentsList = agentsList.filter(ag => ag.name.toLowerCase().includes(state.agentSearch));
             }
@@ -1876,7 +2222,6 @@ function doPost(e) {
                          style="animation: fadeSlideUp 0.5s ease forwards; animation-delay: ${Math.min(idx * 0.05, 0.4)}s;">
                         
                         <div>
-                            <!-- Card Header -->
                             <div class="flex items-start justify-between gap-3 mb-4">
                                 <div class="flex items-center gap-3 min-w-0">
                                     <div class="w-11 h-11 rounded-xl ${isTop1 ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-obsidian-950' : 'bg-obsidian-900 border border-amber-500/30 text-amber-400'} font-extrabold text-sm flex items-center justify-center shrink-0">
@@ -1895,7 +2240,6 @@ function doPost(e) {
                                 ${rankBadge}
                             </div>
 
-                            <!-- Total Sales Value -->
                             <div class="bg-obsidian-950/70 rounded-xl p-3.5 border border-zinc-800/80 mb-4">
                                 <span class="text-[11px] uppercase tracking-wider text-zinc-400 block mb-0.5">Jumlah Jualan Keseluruhan</span>
                                 <div class="flex items-baseline justify-between">
@@ -1909,9 +2253,7 @@ function doPost(e) {
                             </div>
                         </div>
 
-                        <!-- Mini Breakdown: Completed vs Booked/Locked -->
                         <div class="space-y-2.5">
-                            <!-- Progress Bar -->
                             <div class="w-full h-2 rounded-full bg-zinc-800 overflow-hidden flex">
                                 <div class="bg-emerald-500 h-full transition-all duration-500" style="width: ${completedPct}%" title="Completed: RM ${formatCurrency(agent.completedSales)}"></div>
                                 <div class="bg-amber-400 h-full transition-all duration-500" style="width: ${bookedPct}%" title="Booked/Locked: RM ${formatCurrency(agent.bookedLockedSales)}"></div>
@@ -1941,7 +2283,6 @@ function doPost(e) {
             }).join('');
         }
 
-        // Spotlight mouse tracker on Agent Cards
         function handleCardMouseMove(e, cardEl) {
             const rect = cardEl.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -1956,7 +2297,7 @@ function doPost(e) {
         function openAgentModal(agentName, rank) {
             const records = state.filteredRecords
                 .filter(r => (r.reportOwner || 'Unassigned') === agentName)
-                .sort((a, b) => (a.jobDate || '').localeCompare(b.jobDate || '')); // Sorted by Job Date ascending
+                .sort((a, b) => (a.jobDate || '').localeCompare(b.jobDate || ''));
 
             state.activeModalAgent = agentName;
             state.activeModalRecords = records;
@@ -2078,38 +2419,34 @@ function doPost(e) {
         }
 
         // ============================================================================
-        // DEMO SAMPLE DATA (Simulates multi-block report structure)
+        // DEMO SAMPLE DATA
         // ============================================================================
         function loadDemoData() {
             const mockRows = [
-                // Top Summary Block (Should be ignored by parser)
                 ['Nama Agent', 'Total Revenue', 'Total Jobs'],
                 ['Aiman Zulkifli', '15400', '12'],
                 ['Nurul Izzah', '12800', '10'],
                 [],
-                // Agent Block 1
                 ['Booking ID', 'Job Date', 'Job Time', 'Customer', 'Phone', 'Address', 'Area', 'Service', 'Service Details', 'Technicians', 'Created By', 'Report Owner', 'Agent', 'CRM Lead ID', 'CRM Assignment ID', 'CRM Lead Category', 'Freezing Category', 'Freezing Year', 'Status', 'Invoice Amount RM', 'Sales Value RM', 'Payment Status', 'Payment Method', 'Transport Charge RM', 'Deposit Amount RM', 'Deposit Paid At', 'Balance Paid At', 'Notes', 'Last Updated'],
                 ['BK-2026-1001', '2026-11-02', '10:00 AM', 'Ahmad Razali', '012-3456789', 'No 12 Jalan Setia', 'Shah Alam', 'Aircond Chemical Overhaul', '3 Units 1.5HP', 'Tech Ali', 'Aiman Zulkifli', 'Aiman Zulkifli', 'Aiman Zulkifli', 'LD-01', 'AS-01', 'Past Client', 'Normal', '2026', 'Completed', '650', '650', 'Full Paid', 'Online Transfer', '0', '100', '2026-11-01', '2026-11-02', '', '2026-11-02'],
                 ['BK-2026-1002', '2026-11-04', '02:00 PM', 'Siti Sarah', '019-8877665', 'Bangsar South', 'Kuala Lumpur', 'Full House Deep Cleaning', 'Double Storey', 'Team B', 'Aiman Zulkifli', 'Aiman Zulkifli', 'Aiman Zulkifli', 'LD-02', 'AS-02', 'Fresh', 'Normal', '2026', 'Completed', '890', '890', 'Full Paid', 'FPX', '0', '200', '2026-11-03', '2026-11-04', '', '2026-11-04'],
                 ['BK-2026-1003', '2026-11-10', '09:30 AM', 'Dato Ken Wong', '016-2233445', 'Damansara Heights', 'Damansara', 'Cassette Aircond Service', '5 Units Commercial', 'Tech Rizal', 'Aiman Zulkifli', 'Aiman Zulkifli', 'Aiman Zulkifli', 'LD-03', 'AS-03', 'Past Client', 'Normal', '2026', 'Booked', '1450', '1450', 'Deposit Paid', 'Card', '0', '300', '2026-11-06', '', '', '2026-11-06'],
                 ['BK-2026-1004', '2026-11-14', '11:00 AM', 'Farah Nabila', '013-5544332', 'Subang Jaya SS15', 'Subang Jaya', 'Water Heater & Piping', '2 Bathrooms', 'Tech Danial', 'Aiman Zulkifli', 'Aiman Zulkifli', 'Aiman Zulkifli', 'LD-04', 'AS-04', 'Fresh', 'Normal', '2026', 'Locked', '520', '520', 'Deposit Paid', 'QR Pay', '0', '100', '2026-11-08', '', '', '2026-11-08'],
                 [],
-                // Agent Block 2 (Repeated Header)
                 ['Booking ID', 'Job Date', 'Job Time', 'Customer', 'Phone', 'Address', 'Area', 'Service', 'Service Details', 'Technicians', 'Created By', 'Report Owner', 'Agent', 'CRM Lead ID', 'CRM Assignment ID', 'CRM Lead Category', 'Freezing Category', 'Freezing Year', 'Status', 'Invoice Amount RM', 'Sales Value RM', 'Payment Status', 'Payment Method', 'Transport Charge RM', 'Deposit Amount RM', 'Deposit Paid At', 'Balance Paid At', 'Notes', 'Last Updated'],
                 ['BK-2026-2001', '2026-11-03', '10:30 AM', 'Puan Zainab', '017-9988112', 'Taman Melawati', 'Ampang', 'Sofa & Mattress Sanitizing', 'L-Shape + 2 King', 'Team A', 'Nurul Izzah', 'Nurul Izzah', 'Nurul Izzah', 'LD-05', 'AS-05', 'Past Client', 'Normal', '2026', 'Completed', '580', '580', 'Full Paid', 'Online Transfer', '0', '100', '2026-11-01', '2026-11-03', '', '2026-11-03'],
                 ['BK-2026-2002', '2026-11-09', '03:00 PM', 'Kelvin Tan', '012-7766554', 'Mont Kiara', 'Kuala Lumpur', 'Aircond Chemical Overhaul', '4 Units Inverter', 'Tech Ali', 'Nurul Izzah', 'Nurul Izzah', 'Nurul Izzah', 'LD-06', 'AS-06', 'Fresh', 'Normal', '2026', 'Completed', '920', '920', 'Full Paid', 'FPX', '0', '200', '2026-11-05', '2026-11-09', '', '2026-11-09'],
                 ['BK-2026-2003', '2026-11-15', '10:00 AM', 'Dr. Hafiz', '019-3322110', 'Putrajaya Presint 11', 'Putrajaya', 'Post-Renovation Cleaning', 'Semi-D House', 'Team C', 'Nurul Izzah', 'Nurul Izzah', 'Nurul Izzah', 'LD-07', 'AS-07', 'Past Client', 'Normal', '2026', 'Booked', '1280', '1280', 'Deposit Paid', 'Online Transfer', '0', '400', '2026-11-10', '', '', '2026-11-10'],
                 [],
-                // Agent Block 3 (Repeated Header)
                 ['Booking ID', 'Job Date', 'Job Time', 'Customer', 'Phone', 'Address', 'Area', 'Service', 'Service Details', 'Technicians', 'Created By', 'Report Owner', 'Agent', 'CRM Lead ID', 'CRM Assignment ID', 'CRM Lead Category', 'Freezing Category', 'Freezing Year', 'Status', 'Invoice Amount RM', 'Sales Value RM', 'Payment Status', 'Payment Method', 'Transport Charge RM', 'Deposit Amount RM', 'Deposit Paid At', 'Balance Paid At', 'Notes', 'Last Updated'],
                 ['BK-2026-3001', '2026-11-05', '09:00 AM', 'Michelle Lim', '011-2345678', 'Puchong Jaya', 'Puchong', 'Aircond Gas Refill & Service', '2 Units', 'Tech Rizal', 'Daniel Hakim', 'Daniel Hakim', 'Daniel Hakim', 'LD-08', 'AS-08', 'Fresh', 'Normal', '2026', 'Completed', '380', '380', 'Full Paid', 'QR Pay', '0', '50', '2026-11-04', '2026-11-05', '', '2026-11-05'],
                 ['BK-2026-3002', '2026-11-12', '01:30 PM', 'Encik Roslan', '018-7654321', 'Cyberjaya', 'Cyberjaya', 'Electrical Wiring & DB Box', 'Full Inspection', 'Tech Danial', 'Daniel Hakim', 'Daniel Hakim', 'Daniel Hakim', 'LD-09', 'AS-09', 'Past Client', 'Normal', '2026', 'Locked', '760', '760', 'Deposit Paid', 'FPX', '0', '200', '2026-11-09', '', '', '2026-11-09']
             ];
 
+            state.demoMode = true; // sampel sahaja: tidak disimpan & tidak dihantar ke awan
             const res = parseMultiBlockRows(mockRows);
-            saveToLocalStorage();
             renderApp();
-            showToast(`Data sampel dimuatkan (${res.added} rekod transaksi).`, 'success');
+            showToast(`Data sampel dimuatkan (${res.added} rekod). Mod demo: tidak disimpan ke awan.`, 'info');
         }
 
         // ============================================================================
@@ -2171,13 +2508,11 @@ function doPost(e) {
                 entry.jobs += 1;
             });
 
-            // Sales Lead Calculation
             const leadBasic = parseFloat(state.payrollConfig.leadBasic) || 0;
             const leadCommPct = parseFloat(state.payrollConfig.leadCommPct) || 0;
             const leadCommAmount = totalTeamSales * (leadCommPct / 100);
             const leadTotalPayout = leadBasic + leadCommAmount;
 
-            // Agent Calculations
             const agentsList = Array.from(agentSalesMap.values())
                 .sort((a, b) => b.sales - a.sales)
                 .map(ag => {
@@ -2233,12 +2568,10 @@ function doPost(e) {
         function renderCommissionSection() {
             const payroll = calculatePayrollData();
 
-            // Update Sales Lead Display
             els.leadBaseSalesDisplay.textContent = `RM ${formatCurrency(payroll.totalTeamSales)}`;
             els.leadCommAmountDisplay.textContent = `RM ${formatCurrency(payroll.lead.commAmount)}`;
             els.leadTotalPayoutDisplay.textContent = `RM ${formatCurrency(payroll.lead.totalPayout)}`;
 
-            // Render Agent Rows
             if (payroll.agents.length === 0) {
                 els.commissionTableBody.innerHTML = `
                     <tr>
@@ -2296,11 +2629,9 @@ function doPost(e) {
                 }).join('');
             }
 
-            // Update Select All Checkbox state
             const allChecked = payroll.agents.length > 0 && payroll.agents.every(a => a.included);
             els.selectAllAgentsCheck.checked = allChecked;
 
-            // Calculate Grand Totals for Checked Recipients
             let selectedCount = 0;
             let totalBasicSum = 0;
             let totalCommSum = 0;
@@ -2359,7 +2690,6 @@ function doPost(e) {
             const statusLabel = els.statusFilter.options[els.statusFilter.selectedIndex]?.text || 'Semua Status';
             const generatedDate = new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'long', year: 'numeric' });
 
-            // Header Banner (Obsidian Dark + Amber Gold Accent)
             doc.setFillColor(12, 12, 16);
             doc.rect(0, 0, 297, 36, 'F');
             doc.setFillColor(245, 158, 11);
@@ -2376,7 +2706,6 @@ function doPost(e) {
             doc.text(`Tempoh Laporan: ${periodLabel}   |   Penapis Status: ${statusLabel}`, 14, 24);
             doc.text(`Tarikh Dijana: ${generatedDate}   |   Jumlah Jualan Pasukan: RM ${formatCurrency(payroll.totalTeamSales)}`, 14, 30);
 
-            // Build Table Rows
             const tableBody = [];
             let sumSales = 0;
             let sumBasic = 0;
@@ -2474,7 +2803,6 @@ function doPost(e) {
                 }
             });
 
-            // Signature Footer
             const finalY = doc.lastAutoTable.finalY + 18;
             if (finalY < 185) {
                 doc.setDrawColor(160, 160, 170);
@@ -2492,60 +2820,6 @@ function doPost(e) {
             const safeFileName = `Payroll-Commission-${periodLabel.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
             doc.save(safeFileName);
             showToast(`Penyata PDF (${safeFileName}) berjaya dimuat turun!`, 'success');
-        }
-
-        // ============================================================================
-        // GOOGLE SHEETS BACKEND SYNC (APPS SCRIPT WEBHOOK)
-        // ============================================================================
-        async function pushDataToGoogleSheets() {
-            if (!state.gasUrl) {
-                showToast('Sila masukkan URL Google Apps Script terlebih dahulu.', 'error');
-                return;
-            }
-            try {
-                showToast('Menghantar data ke Google Sheets...', 'info');
-                const payload = {
-                    records: Array.from(state.recordsMap.values()),
-                    payroll: state.payrollConfig
-                };
-                await fetch(state.gasUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                showToast('Data berjaya disegerakkan (Push) ke Google Sheets!', 'success');
-            } catch (err) {
-                console.error('Ralat Push Google Sheets:', err);
-                showToast('Gagal menghantar data. Semak semula URL Web App anda.', 'error');
-            }
-        }
-
-        async function pullDataFromGoogleSheets() {
-            if (!state.gasUrl) {
-                showToast('Sila masukkan URL Google Apps Script terlebih dahulu.', 'error');
-                return;
-            }
-            try {
-                showToast('Menarik data dari Google Sheets...', 'info');
-                const response = await fetch(state.gasUrl);
-                const data = await response.json();
-
-                if (data && Array.isArray(data.records)) {
-                    state.recordsMap = new Map(data.records.map(r => [r.bookingId, r]));
-                    saveToLocalStorage();
-                }
-                if (data && data.payroll) {
-                    state.payrollConfig = { ...state.payrollConfig, ...data.payroll };
-                    savePayrollConfig();
-                    syncLeadInputsFromState();
-                }
-                renderApp();
-                showToast(`Berjaya menarik ${state.recordsMap.size} rekod dari Google Sheets!`, 'success');
-            } catch (err) {
-                console.error('Ralat Pull Google Sheets:', err);
-                showToast('Gagal menarik data. Pastikan deployment diset kepada "Anyone".', 'error');
-            }
         }
 
         function showToast(message, type = 'info') {
